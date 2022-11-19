@@ -1,0 +1,9 @@
+domain: ksdns.io
+layout:
+- go.kubebuilder.io/v4-alpha
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: ksdns
+repo: github.com/cldmnky/ksdns
+version: "3"
