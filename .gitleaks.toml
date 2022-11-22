@@ -1,0 +1,10 @@
+[allowlist]
+  description = "Repo Allowlist"
+  paths = [
+    '''.*_test.go''',
+    # Ignore the .gitleaks.toml
+    '''\.gitleaks\.toml$''',
+  ]
+  regexes = [
+    # '''custom-regexes-to-ignore-here''',
+  ]
