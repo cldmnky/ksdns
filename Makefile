@@ -63,6 +63,8 @@ endif
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+include ./zupd.mk
+
 .PHONY: all
 all: build
 
