@@ -28,6 +28,12 @@ func NewConfig(addr, port, secret string, zoneDefs []string, reload, zoneDir, ch
 	if reload == "" {
 		reload = "0"
 	}
+	if addr == "" {
+		addr = "0.0.0.0"
+	}
+	if port == "" {
+		port = "53"
+	}
 	d, err := time.ParseDuration(reload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse reload time: %s", err.Error())
