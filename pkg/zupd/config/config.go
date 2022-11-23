@@ -57,6 +57,7 @@ func NewConfig(addr, port, secret string, zoneDefs []string, reload, zoneDir, ch
 		}
 		zoneDir = wd
 	}
+
 	return &Config{
 		Addr:           addr,
 		Port:           port,

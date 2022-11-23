@@ -29,7 +29,7 @@ const (
 
 var (
 	// config for the test server
-	testConfig, err = config.NewConfig("127.0.0.1", "1053", "foo", []string{"example.com.:../file/fixtures/example.com"}, "1m", "", "")
+	testConfig, _ = config.NewConfig("127.0.0.1", "1053", "foo", []string{"example.com.:../file/fixtures/example.com"}, "", "", "")
 )
 
 func TestInsert(t *testing.T) {
@@ -69,6 +69,12 @@ func TestInsert(t *testing.T) {
 		require.NoError(t, err, "Failed to communicate with test server")
 		assert.Equal(t, tc.expected, r.Rcode, fmt.Sprintf("Failed to exchange %d", i))
 	}
+
+}
+
+func TestNewServer(t *testing.T) {
+	s := NewServer(testConfig)
+	assert.NotNil(t, s)
 
 }
 

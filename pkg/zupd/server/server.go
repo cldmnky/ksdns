@@ -28,6 +28,7 @@ func NewServer(config *config.Config) *Server {
 		rTimeout:   5 * time.Second,
 		wTimeout:   5 * time.Second,
 		tsigSecret: map[string]string{".": config.Secret},
+		config:     config,
 	}
 }
 
@@ -36,13 +37,11 @@ func (s *Server) Addr() string {
 }
 
 func (s *Server) start(ds *dns.Server) {
-
 	log.Info(fmt.Sprintf("Start %s listener on %s", ds.Net, s.Addr()))
 	err := ds.ListenAndServe()
 	if err != nil {
 		log.Error(fmt.Sprintf("Start %s listener on %s failed:%s", ds.Net, s.Addr(), err.Error()))
 	}
-
 }
 
 func (s *Server) Run(ctx context.Context) {

@@ -1,0 +1,12 @@
+apiVersion: rfc1035.ksdns.io/v1alpha1
+kind: Zone
+metadata:
+  labels:
+    app.kubernetes.io/name: zone
+    app.kubernetes.io/instance: zone-sample
+    app.kubernetes.io/part-of: ksdns
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ksdns
+  name: zone-sample
+spec:
+  # TODO(user): Add fields here

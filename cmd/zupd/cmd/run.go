@@ -5,12 +5,12 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 
 	"github.com/cldmnky/ksdns/pkg/zupd/config"
 	"github.com/cldmnky/ksdns/pkg/zupd/server"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -25,12 +25,12 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("run called")
-		config, err := config.NewConfig("127.0.0.1", "1053", "foo", []string{"example.com.:example.com"}, "", "", "")
+		log.SetLevel(log.DebugLevel)
+		config, err := config.NewConfig("127.0.0.1", "1053", "Zm9vCg==", []string{"example.com.:./pkg/zupd/file/fixtures/example.com"}, "", "", "")
 		if err != nil {
 			cobra.CheckErr(err)
 		}
-		server := server.NewServer(config)
+		s := server.NewServer(config)
 
 		ctx, cancel := context.WithCancel(cmd.Context())
 		c := make(chan os.Signal, 1)
@@ -46,7 +46,7 @@ to quickly create a Cobra application.`,
 			case <-ctx.Done():
 			}
 		}()
-		server.Run(cmd.Context())
+		s.Run(cmd.Context())
 		<-ctx.Done()
 	},
 }
