@@ -1,9 +1,8 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-*/
-package cmd
+// Package coremain contains the functions for starting CoreDNS.
+package run
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -13,49 +12,18 @@ import (
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
-	"github.com/spf13/cobra"
-
-	_ "github.com/coredns/coredns/core/plugin" // Plug in CoreDNS.
 )
-
-const (
-	CoreVersion = "1.10.0"
-	coreName    = "CoreDNS"
-	serverType  = "dns"
-)
-
-// runCmd represents the run command
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run the zupd CoreDNS server",
-	Long:  `Run the zupd CoreDNS server`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// print args
-		fmt.Println("run called")
-		fmt.Println("args: ", cmd.Flags().Args())
-		// run CoreDNS
-		Run()
-
-	},
-}
 
 func init() {
-	rootCmd.AddCommand(runCmd)
 	caddy.DefaultConfigFile = "Corefile"
 	caddy.Quiet = true // don't show init stuff from caddy
 	setVersion()
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// runCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	runCmd.Flags().StringVarP(&conf, "conf", "", "", "Corefile to load (default \""+caddy.DefaultConfigFile+"\")")
-	// plugins
-	runCmd.Flags().BoolVarP(&plugins, "plugins", "", false, "List installed plugins")
-	runCmd.Flags().StringVarP(&caddy.PidFile, "pidfile", "", "", "Path to write pid file")
-	// version
-	runCmd.Flags().BoolVarP(&version, "version", "", false, "Show version")
-	// quiet
-	runCmd.Flags().BoolVarP(&dnsserver.Quiet, "quiet", "", false, "Quiet mode (no initialization output)")
+	flag.StringVar(&conf, "conf", "", "Corefile to load (default \""+caddy.DefaultConfigFile+"\")")
+	flag.BoolVar(&plugins, "plugins", false, "List installed plugins")
+	flag.StringVar(&caddy.PidFile, "pidfile", "", "Path to write pid file")
+	flag.BoolVar(&version, "version", false, "Show version")
+	flag.BoolVar(&dnsserver.Quiet, "quiet", false, "Quiet mode (no initialization output)")
 
 	caddy.RegisterCaddyfileLoader("flag", caddy.LoaderFunc(confLoader))
 	caddy.SetDefaultCaddyfileLoader("default", caddy.LoaderFunc(defaultLoader))
@@ -67,7 +35,7 @@ func init() {
 // Run is CoreDNS's main() function.
 func Run() {
 	caddy.TrapSignals()
-	//flag.Parse()
+	flag.Parse()
 
 	//if len(flag.Args()) > 0 {
 	//	mustLogFatal(fmt.Errorf("extra command line arguments: %s", flag.Args()))
