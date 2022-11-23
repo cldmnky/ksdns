@@ -15,7 +15,7 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/spf13/cobra"
 
-	_ "github.com/coredns/coredns/core/plugin" // Plug in CoreDNS.
+	_ "github.com/cldmnky/ksdns/pkg/zupd/core/plugin" // Plug in CoreDNS.
 )
 
 const (
@@ -30,9 +30,6 @@ var runCmd = &cobra.Command{
 	Short: "Run the zupd CoreDNS server",
 	Long:  `Run the zupd CoreDNS server`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// print args
-		fmt.Println("run called")
-		fmt.Println("args: ", cmd.Flags().Args())
 		// run CoreDNS
 		Run()
 
@@ -62,16 +59,12 @@ func init() {
 
 	caddy.AppName = coreName
 	caddy.AppVersion = CoreVersion
+	dnsserver.Directives = Directives
 }
 
 // Run is CoreDNS's main() function.
 func Run() {
 	caddy.TrapSignals()
-	//flag.Parse()
-
-	//if len(flag.Args()) > 0 {
-	//	mustLogFatal(fmt.Errorf("extra command line arguments: %s", flag.Args()))
-	//}
 
 	log.SetOutput(os.Stdout)
 	log.SetFlags(0) // Set to 0 because we're doing our own time, with timezone
@@ -215,3 +208,59 @@ var (
 	// Gitcommit contains the commit where we built CoreDNS from.
 	GitCommit string
 )
+
+// Directives
+var Directives = []string{
+	"metadata",
+	"geoip",
+	"cancel",
+	"tls",
+	"reload",
+	"nsid",
+	"bufsize",
+	"root",
+	"bind",
+	"debug",
+	"trace",
+	"ready",
+	"health",
+	"pprof",
+	"prometheus",
+	"errors",
+	"log",
+	"dnstap",
+	"local",
+	"dns64",
+	"acl",
+	"any",
+	"chaos",
+	"loadbalance",
+	"tsig",
+	"cache",
+	"rewrite",
+	"header",
+	"dnssec",
+	"autopath",
+	"minimal",
+	"template",
+	"transfer",
+	"hosts",
+	"route53",
+	"azure",
+	"clouddns",
+	"k8s_external",
+	"kubernetes",
+	"file",
+	"dynamicupdate",
+	"auto",
+	"secondary",
+	"etcd",
+	"loop",
+	"forward",
+	"grpc",
+	"erratic",
+	"whoami",
+	"on",
+	"sign",
+	"view",
+}

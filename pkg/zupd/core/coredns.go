@@ -3,5 +3,5 @@ package core
 
 import (
 	// plug in the server
-	_ "github.com/cldmnky/ksdns/pkg/zupd/core/dnsserver"
+	_ "github.com/coredns/coredns/core/dnsserver"
 )
