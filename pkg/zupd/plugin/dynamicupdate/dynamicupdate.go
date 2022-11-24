@@ -24,15 +24,16 @@ type (
 		// Next plugin in the chain.
 		Next plugin.Handler
 		// Zones holds the configuration for the zones handled by this plugin.
-		Zones file.Zones
+		Zones Zones
 		// transfer implements the transfer plugin.
 		transfer *transfer.Transfer
 		metrics  *metrics.Metrics
 	}
 
 	Zones struct {
-		Z     map[string]*file.Zone
-		Names []string
+		Z            map[string]*file.Zone
+		Names        []string
+		DynamicZones map[string]*file.Zone
 	}
 )
 

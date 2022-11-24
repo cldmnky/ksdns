@@ -24,6 +24,7 @@ func TestExternalDNS(t *testing.T) {
 	defer rm()
 
 	corefile := `example.org:1053 {
+		debug
 		bind 127.0.0.1
 		dynamicupdate ` + name + ` {
 			reload 5s
@@ -107,7 +108,7 @@ func TestExternalDNS(t *testing.T) {
 	err = provider.ApplyChanges(context.Background(), p)
 	require.NoError(t, err)
 
-	time.Sleep(time.Second * 20)
+	time.Sleep(time.Second * 10)
 
 	recs, err = provider.Records(context.Background())
 	require.NoError(t, err)

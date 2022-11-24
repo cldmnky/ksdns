@@ -29,12 +29,17 @@ func setup(c *caddy.Controller) error {
 	c.OnStartup(func() error {
 		m := dnsserver.GetConfig(c).Handler("prometheus")
 		if m != nil {
-			(&d).metrics = m.(*metrics.Metrics)
+			d.metrics = m.(*metrics.Metrics)
 		}
 		t := dnsserver.GetConfig(c).Handler("transfer")
 		if t != nil {
-			(&d).transfer = t.(*transfer.Transfer)
+			d.transfer = t.(*transfer.Transfer)
 		}
+		go func() {
+			for _, n := range zones.Names {
+				d.transfer.Notify(n)
+			}
+		}()
 		return nil
 	})
 	c.OnRestartFailed(func() error {
@@ -67,7 +72,7 @@ func setup(c *caddy.Controller) error {
 	return nil
 }
 
-func fileparse(c *caddy.Controller) (file.Zones, error) {
+func fileparse(c *caddy.Controller) (Zones, error) {
 	z := make(map[string]*file.Zone)
 	names := []string{}
 
@@ -78,7 +83,7 @@ func fileparse(c *caddy.Controller) (file.Zones, error) {
 	for c.Next() {
 		// file db.file [zones...]
 		if !c.NextArg() {
-			return file.Zones{}, c.ArgErr()
+			return Zones{}, c.ArgErr()
 		}
 		fileName := c.Val()
 
@@ -111,7 +116,7 @@ func fileparse(c *caddy.Controller) (file.Zones, error) {
 		}()
 
 		if err != nil {
-			return file.Zones{}, err
+			return Zones{}, err
 		}
 
 		for c.NextBlock() {
@@ -119,11 +124,11 @@ func fileparse(c *caddy.Controller) (file.Zones, error) {
 			case "reload":
 				t := c.RemainingArgs()
 				if len(t) < 1 {
-					return file.Zones{}, errors.New("reload duration value is expected")
+					return Zones{}, errors.New("reload duration value is expected")
 				}
 				d, err := time.ParseDuration(t[0])
 				if err != nil {
-					return file.Zones{}, plugin.Error("file", err)
+					return Zones{}, plugin.Error("file", err)
 				}
 				reload = d
 			case "upstream":
@@ -131,7 +136,7 @@ func fileparse(c *caddy.Controller) (file.Zones, error) {
 				c.RemainingArgs()
 
 			default:
-				return file.Zones{}, c.Errf("unknown property '%s'", c.Val())
+				return Zones{}, c.Errf("unknown property '%s'", c.Val())
 			}
 		}
 
@@ -144,9 +149,9 @@ func fileparse(c *caddy.Controller) (file.Zones, error) {
 	if openErr != nil {
 		if reload == 0 {
 			// reload hasn't been set make this a fatal error
-			return file.Zones{}, plugin.Error("file", openErr)
+			return Zones{}, plugin.Error("file", openErr)
 		}
 		log.Warningf("Failed to open %q: trying again in %s", openErr, reload)
 	}
-	return file.Zones{Z: z, Names: names}, nil
+	return Zones{Z: z, Names: names}, nil
 }
