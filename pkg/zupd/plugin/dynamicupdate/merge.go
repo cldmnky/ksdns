@@ -21,6 +21,11 @@ func (d DynamicUpdate) Merge(origin string) *file.Zone {
 
 	// Make a copy of the base zone
 	newZone := z.Copy()
+	for _, e := range z.All() {
+		for _, rr := range e.All() {
+			newZone.Insert(rr)
+		}
+	}
 
 	// Merge the dynamic zone with the static zone.
 	for _, te := range dz.All() {

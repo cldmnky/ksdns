@@ -14,7 +14,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-var log = clog.NewWithPlugin("file")
+var log = clog.NewWithPlugin("dynamicupdate")
 
 // Types
 
@@ -69,17 +69,20 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	// Handle dynamic update
 	if r.Opcode == dns.OpcodeUpdate {
 		log.Infof("Handling dynamic update for %s", zone)
-		if r.IsTsig() != nil {
-			status := w.TsigStatus()
-			if status != nil {
-				log.Infof("TSIG status: %s", status.Error())
-				return dns.RcodeRefused, nil
-			}
-		}
 		dz.RLock()
 
 		for range r.Question {
 			for _, rr := range r.Ns {
+				// Only allow TXT, CNAME, A, AAAA, and SRV records
+				if rr.Header().Rrtype != dns.TypeTXT &&
+					rr.Header().Rrtype != dns.TypeCNAME &&
+					rr.Header().Rrtype != dns.TypeA &&
+					rr.Header().Rrtype != dns.TypeAAAA &&
+					rr.Header().Rrtype != dns.TypeSRV {
+					log.Infof("Rejecting dynamic update for %s: %s", zone, rr.Header().String())
+					dz.RUnlock()
+					return dns.RcodeRefused, nil
+				}
 				h := rr.Header()
 				if _, ok := dns.IsDomainName(h.Name); ok {
 					switch updateType(h) {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	plugintest "github.com/coredns/coredns/plugin/test"
+	"github.com/miekg/dns"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
@@ -70,7 +71,7 @@ func TestExternalDNS(t *testing.T) {
 	require.NoError(t, err)
 	recs, err := provider.Records(context.Background())
 	require.NoError(t, err)
-	require.Len(t, recs, 7)
+	require.Len(t, recs, 6)
 
 	p := &plan.Changes{
 		Create: []*endpoint.Endpoint{
@@ -83,11 +84,6 @@ func TestExternalDNS(t *testing.T) {
 			{
 				DNSName:    "foo.example.org",
 				RecordType: "TXT",
-				Targets:    []string{"boom"},
-			},
-			{
-				DNSName:    "ns.example.org",
-				RecordType: "NS",
 				Targets:    []string{"boom"},
 			},
 		},
@@ -108,9 +104,22 @@ func TestExternalDNS(t *testing.T) {
 	err = provider.ApplyChanges(context.Background(), p)
 	require.NoError(t, err)
 
-	time.Sleep(time.Second * 10)
-
 	recs, err = provider.Records(context.Background())
 	require.NoError(t, err)
-	require.Len(t, recs, 9)
+	require.Len(t, recs, 8)
+
+	// Lookup
+
+	// New client
+	c := new(dns.Client)
+	c.TsigSecret = map[string]string{fakeTsigKey: fakeTsigSecret}
+	m := new(dns.Msg)
+	m.SetTsig(fakeTsigSecret, dns.HmacSHA256, 300, time.Now().Unix())
+	m.SetQuestion("foo.example.org.", dns.TypeA)
+	r, _, err := c.Exchange(m, udp)
+	require.NoError(t, err)
+	require.Len(t, r.Answer, 1)
+	require.Equal(t, "foo.example.org.", r.Answer[0].Header().Name)
+	require.Equal(t, uint32(400), r.Answer[0].Header().Ttl)
+
 }

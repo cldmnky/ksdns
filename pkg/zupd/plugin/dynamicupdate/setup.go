@@ -82,7 +82,7 @@ func fileparse(c *caddy.Controller) (Zones, error) {
 	reload := 1 * time.Minute
 
 	for c.Next() {
-		// file db.file [zones...]
+		// dynamicupdate db.file [zones...]
 		if !c.NextArg() {
 			return Zones{}, c.ArgErr()
 		}
