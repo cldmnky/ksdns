@@ -55,6 +55,8 @@ import (
 	_ "github.com/coredns/coredns/plugin/tsig"
 	_ "github.com/coredns/coredns/plugin/view"
 	_ "github.com/coredns/coredns/plugin/whoami"
-	_ "github.com/cldmnky/ksdns/pkg/zupd/plugin/dynamicupdate"
 
+	// Include all plugins that are not imported by the above.
+	_ "github.com/cldmnky/ksdns/pkg/zupd/plugin/dynamicupdate"
+	_ "github.com/coredns/kubeapi"
 )

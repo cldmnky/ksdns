@@ -106,6 +106,7 @@ func TestZoneSRVAdditional(t *testing.T) {
 
 	// Corefile with for example without proxy section.
 	corefile := `example.org:10053 {
+		kubeapi
 		bind 127.0.0.1
 		dynamicupdate ` + name + `
 	}`

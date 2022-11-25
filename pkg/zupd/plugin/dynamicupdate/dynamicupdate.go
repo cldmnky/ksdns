@@ -12,6 +12,7 @@ import (
 	"github.com/coredns/coredns/plugin/transfer"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var log = clog.NewWithPlugin("dynamicupdate")
@@ -28,6 +29,7 @@ type (
 		// transfer implements the transfer plugin.
 		transfer *transfer.Transfer
 		metrics  *metrics.Metrics
+		client   client.Client
 	}
 
 	Zones struct {

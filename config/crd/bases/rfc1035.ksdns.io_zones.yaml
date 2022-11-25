@@ -35,13 +35,19 @@ spec:
           spec:
             description: ZoneSpec defines the desired state of Zone
             properties:
-              foo:
-                description: Foo is an example field of Zone. Edit zone_types.go to
-                  remove/update
+              zone:
                 type: string
             type: object
           status:
             description: ZoneStatus defines the observed state of Zone
+            properties:
+              dynamicRRs:
+                items:
+                  properties:
+                    rr:
+                      type: string
+                  type: object
+                type: array
             type: object
         type: object
     served: true

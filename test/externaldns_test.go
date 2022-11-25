@@ -6,7 +6,6 @@ import (
 	"time"
 
 	plugintest "github.com/coredns/coredns/plugin/test"
-	"github.com/miekg/dns"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/external-dns/endpoint"
 	"sigs.k8s.io/external-dns/plan"
@@ -107,19 +106,4 @@ func TestExternalDNS(t *testing.T) {
 	recs, err = provider.Records(context.Background())
 	require.NoError(t, err)
 	require.Len(t, recs, 8)
-
-	// Lookup
-
-	// New client
-	c := new(dns.Client)
-	c.TsigSecret = map[string]string{fakeTsigKey: fakeTsigSecret}
-	m := new(dns.Msg)
-	m.SetTsig(fakeTsigSecret, dns.HmacSHA256, 300, time.Now().Unix())
-	m.SetQuestion("foo.example.org.", dns.TypeA)
-	r, _, err := c.Exchange(m, udp)
-	require.NoError(t, err)
-	require.Len(t, r.Answer, 1)
-	require.Equal(t, "foo.example.org.", r.Answer[0].Header().Name)
-	require.Equal(t, uint32(400), r.Answer[0].Header().Ttl)
-
 }

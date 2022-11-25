@@ -13,6 +13,9 @@ import (
 	"github.com/coredns/coredns/plugin/metrics"
 	"github.com/coredns/coredns/plugin/pkg/upstream"
 	"github.com/coredns/coredns/plugin/transfer"
+	"github.com/coredns/kubeapi"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func init() { plugin.Register("dynamicupdate", setup) }
@@ -35,11 +38,29 @@ func setup(c *caddy.Controller) error {
 		if t != nil {
 			d.transfer = t.(*transfer.Transfer)
 		}
+		c := dnsserver.GetConfig(c).Handler("kubeapi")
+		if c != nil {
+			cfg, err := c.(*kubeapi.KubeAPI).ClientConfig.ClientConfig()
+			if err != nil {
+				return err
+			}
+			d.client, err = client.New(cfg, client.Options{Scheme: clientgoscheme.Scheme})
+			if err != nil {
+				return err
+			}
+			// start controller
+			go func() {
+				if err := d.RunController(); err != nil {
+					log.Errorf("Failed to run controller: %v", err)
+				}
+			}()
+		}
 		go func() {
 			for _, n := range zones.Names {
 				d.transfer.Notify(n)
 			}
 		}()
+
 		return nil
 	})
 	c.OnRestartFailed(func() error {

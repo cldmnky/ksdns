@@ -17,42 +17,60 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/coredns/coredns/plugin/file"
 	"github.com/miekg/dns"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ZoneSpec defines the desired state of Zone
 type ZoneSpec struct {
-	Zone       string      `json:"zone,omitempty"`
-	DynamicRRs []DynamicRR `json:"dynamicRRs,omitempty"`
+	Zone string `json:"zone,omitempty"`
 }
 
 func (zs *ZoneSpec) GetZone() string {
 	return zs.Zone
 }
 
-func (zs *ZoneSpec) GetDynamicRRs() []DynamicRR {
+// ZoneStatus defines the observed state of Zone
+type ZoneStatus struct {
+	DynamicRRs []DynamicRR `json:"dynamicRRs,omitempty"`
+}
+
+func (zs *ZoneStatus) GetDynamicRRs() []DynamicRR {
 	return zs.DynamicRRs
 }
 
-// AddDynamicRR to ZoneSpec
-func (zs *ZoneSpec) AddDynamicRR(rr dns.RR) {
+// AddDynamicRR to ZoneStatus
+func (zs *ZoneStatus) SetDynamicRRs(rrs []dns.RR) {
 	if zs.DynamicRRs == nil {
 		zs.DynamicRRs = make([]DynamicRR, 0)
 	}
-	zs.DynamicRRs = append(zs.DynamicRRs, DynamicRR{
-		RR: rr.String(),
-	})
+	newRRs := make([]DynamicRR, 0)
+	for _, rr := range rrs {
+		newRRs = append(newRRs, DynamicRR{
+			RR: rr.String(),
+		})
+	}
+	zs.DynamicRRs = newRRs
+}
+
+func (zs *ZoneStatus) GetDynamicRRsAsZone(name string) *file.Zone {
+	zone := file.NewZone(name, "")
+	for _, rrString := range zs.DynamicRRs {
+		if rr, err := dns.NewRR(rrString.RR); err != nil {
+			continue
+		} else {
+			zone.Insert(rr)
+		}
+	}
+	if len(zone.All()) == 0 {
+		return nil
+	}
+	return zone
 }
 
 type DynamicRR struct {
 	RR string `json:"rr,omitempty"`
-}
-
-// ZoneStatus defines the observed state of Zone
-type ZoneStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 //+kubebuilder:object:root=true
