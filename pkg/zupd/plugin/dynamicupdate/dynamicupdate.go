@@ -14,7 +14,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-var log = clog.NewWithPlugin("file")
+var log = clog.NewWithPlugin("dynamicupdate")
 
 // Types
 
@@ -51,6 +51,11 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		return dns.RcodeNotAuth, nil
 	}
 
+	dz, ok := d.Zones.DynamicZones[zone]
+	if !ok || dz == nil {
+		return dns.RcodeServerFailure, nil
+	}
+
 	// If transfer is not loaded, we'll see these, answer with refused (no transfer allowed).
 	if state.QType() == dns.TypeAXFR || state.QType() == dns.TypeIXFR {
 		return dns.RcodeRefused, nil
@@ -64,37 +69,42 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 	// Handle dynamic update
 	if r.Opcode == dns.OpcodeUpdate {
 		log.Infof("Handling dynamic update for %s", zone)
-		if r.IsTsig() != nil {
-			status := w.TsigStatus()
-			if status != nil {
-				log.Infof("TSIG status: %s", status.Error())
-				return dns.RcodeRefused, nil
-			}
-		}
-		z.RLock()
+		dz.RLock()
 
 		for range r.Question {
 			for _, rr := range r.Ns {
+				// Only allow TXT, CNAME, A, AAAA, and SRV records
+				if rr.Header().Rrtype != dns.TypeTXT &&
+					rr.Header().Rrtype != dns.TypeCNAME &&
+					rr.Header().Rrtype != dns.TypeA &&
+					rr.Header().Rrtype != dns.TypeAAAA &&
+					rr.Header().Rrtype != dns.TypeSRV {
+					log.Infof("Rejecting dynamic update for %s: %s", zone, rr.Header().String())
+					dz.RUnlock()
+					return dns.RcodeRefused, nil
+				}
 				h := rr.Header()
 				if _, ok := dns.IsDomainName(h.Name); ok {
 					switch updateType(h) {
 					case "insert":
 						log.Infof("Inserting %s", rr.String())
-						if err := z.Insert(rr); err != nil {
+						if err := dz.Insert(rr); err != nil {
 							log.Infof("Error inserting %s: %s", rr.String(), err.Error())
-							z.RUnlock()
+							dz.RUnlock()
 							return dns.RcodeServerFailure, nil
 						}
 					case "remove":
 						log.Infof("Removing %s", rr.String())
-						z.Delete(rr)
+						dz.Delete(rr)
 					default:
 						log.Infof("Unknown update type for %s", rr.String())
+						dz.RUnlock()
 						return dns.RcodeNotImplemented, nil
 					}
 				}
 			}
 		}
+		z = d.Merge(zone)
 		// Update SOA serial
 		apex, err := z.ApexIfDefined()
 		if err != nil {
@@ -112,7 +122,7 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 				log.Infof("Updated SOA serial to %d", soa.Serial)
 			}
 		}
-		z.RUnlock()
+		dz.RUnlock()
 
 		// Notify other servers
 		if d.transfer != nil {
@@ -131,7 +141,7 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		log.Infof("Dynamic update for %s from %s: %s", zone, state.IP(), m.String())
 		return dns.RcodeSuccess, nil
 	}
-
+	z = d.Merge(zone)
 	z.RLock()
 	exp := z.Expired
 	z.RUnlock()

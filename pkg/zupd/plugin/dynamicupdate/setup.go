@@ -74,6 +74,7 @@ func setup(c *caddy.Controller) error {
 
 func fileparse(c *caddy.Controller) (Zones, error) {
 	z := make(map[string]*file.Zone)
+	dz := make(map[string]*file.Zone)
 	names := []string{}
 
 	config := dnsserver.GetConfig(c)
@@ -81,7 +82,7 @@ func fileparse(c *caddy.Controller) (Zones, error) {
 	reload := 1 * time.Minute
 
 	for c.Next() {
-		// file db.file [zones...]
+		// dynamicupdate db.file [zones...]
 		if !c.NextArg() {
 			return Zones{}, c.ArgErr()
 		}
@@ -102,6 +103,7 @@ func fileparse(c *caddy.Controller) (Zones, error) {
 
 			for i := range origins {
 				z[origins[i]] = file.NewZone(origins[i], fileName)
+				dz[origins[i]] = file.NewZone(origins[i], "")
 				if openErr == nil {
 					reader.Seek(0, 0)
 					zone, err := file.Parse(reader, origins[i], fileName, 0)
@@ -153,5 +155,5 @@ func fileparse(c *caddy.Controller) (Zones, error) {
 		}
 		log.Warningf("Failed to open %q: trying again in %s", openErr, reload)
 	}
-	return Zones{Z: z, Names: names}, nil
+	return Zones{Z: z, Names: names, DynamicZones: dz}, nil
 }

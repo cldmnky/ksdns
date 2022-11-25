@@ -7,8 +7,8 @@ import (
 
 // Transfer implements the transfer.Transfer interface.
 func (d DynamicUpdate) Transfer(zone string, serial uint32) (<-chan []dns.RR, error) {
-	z, ok := d.Zones.Z[zone]
-	if !ok || z == nil {
+	z := d.Merge(zone)
+	if z == nil {
 		return nil, transfer.ErrNotAuthoritative
 	}
 	return z.Transfer(serial)
