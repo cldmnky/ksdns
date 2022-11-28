@@ -1,6 +1,7 @@
 package dynamicupdate
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -11,12 +12,14 @@ import (
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/file"
 	"github.com/coredns/coredns/plugin/metrics"
+	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/pkg/upstream"
 	"github.com/coredns/coredns/plugin/transfer"
 	"github.com/coredns/kubeapi"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var log = clog.NewWithPlugin("dynamicupdate")
 
 func init() { plugin.Register("dynamicupdate", setup) }
 
@@ -28,15 +31,20 @@ func setup(c *caddy.Controller) error {
 	d := DynamicUpdate{
 		Zones: zones,
 	}
+	ctx, stopController := context.WithCancel(context.Background())
 	// get the transfer plugin, so we can send notifies and send notifies on startup as well.
 	c.OnStartup(func() error {
 		m := dnsserver.GetConfig(c).Handler("prometheus")
 		if m != nil {
 			d.metrics = m.(*metrics.Metrics)
+		} else {
+			return errors.New("prometheus plugin is required")
 		}
 		t := dnsserver.GetConfig(c).Handler("transfer")
 		if t != nil {
 			d.transfer = t.(*transfer.Transfer)
+		} else {
+			return errors.New("transfer plugin is required")
 		}
 		c := dnsserver.GetConfig(c).Handler("kubeapi")
 		if c != nil {
@@ -44,16 +52,13 @@ func setup(c *caddy.Controller) error {
 			if err != nil {
 				return err
 			}
-			d.client, err = client.New(cfg, client.Options{Scheme: clientgoscheme.Scheme})
+			d.restConfig = cfg
+			d.client, err = client.New(cfg, client.Options{})
 			if err != nil {
 				return err
 			}
-			// start controller
-			go func() {
-				if err := d.RunController(); err != nil {
-					log.Errorf("Failed to run controller: %v", err)
-				}
-			}()
+		} else {
+			return errors.New("kubeapi plugin is required")
 		}
 		go func() {
 			for _, n := range zones.Names {
@@ -63,6 +68,16 @@ func setup(c *caddy.Controller) error {
 
 		return nil
 	})
+	c.OnStartup(func() error {
+		// start controller
+		go func() {
+			if err := d.RunController(ctx); err != nil {
+				log.Errorf("Failed to run controller: %v", err)
+			}
+		}()
+		return nil
+	})
+
 	c.OnRestartFailed(func() error {
 		t := dnsserver.GetConfig(c).Handler("transfer")
 		if t == nil {
@@ -73,6 +88,11 @@ func setup(c *caddy.Controller) error {
 				d.transfer.Notify(n)
 			}
 		}()
+		return nil
+	})
+
+	c.OnShutdown(func() error {
+		stopController()
 		return nil
 	})
 

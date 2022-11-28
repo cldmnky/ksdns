@@ -8,17 +8,14 @@ import (
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/file"
 	"github.com/coredns/coredns/plugin/metrics"
-	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/transfer"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var log = clog.NewWithPlugin("dynamicupdate")
-
 // Types
-
 type (
 	// DynamicUpdate is a plugin that implements the file backend.
 	DynamicUpdate struct {
@@ -27,9 +24,10 @@ type (
 		// Zones holds the configuration for the zones handled by this plugin.
 		Zones Zones
 		// transfer implements the transfer plugin.
-		transfer *transfer.Transfer
-		metrics  *metrics.Metrics
-		client   client.Client
+		transfer   *transfer.Transfer
+		metrics    *metrics.Metrics
+		client     client.Client
+		restConfig *rest.Config
 	}
 
 	Zones struct {

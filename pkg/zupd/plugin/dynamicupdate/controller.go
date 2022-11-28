@@ -1,6 +1,8 @@
 package dynamicupdate
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -15,22 +17,22 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme = runtime.NewScheme()
+	//setupLog = ctrl.Log.WithName("setup")
+	setupLog = log
 )
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(rfc1035v1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
+
 }
 
-func (d *DynamicUpdate) RunController() error {
+func (d *DynamicUpdate) RunController(ctx context.Context) error {
 	var (
-		metricsAddr          string = ":8080"
-		enableLeaderElection bool   = true
-		probeAddr            string = ":8081"
+		metricsAddr          string = "127.0.0.1:8080"
+		enableLeaderElection bool   = false
+		probeAddr            string = "127.0.0.1:8081"
 	)
 
 	opts := zap.Options{
@@ -38,24 +40,13 @@ func (d *DynamicUpdate) RunController() error {
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := ctrl.NewManager(d.restConfig, ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "3deb8c7a.ksdns.io",
-		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
-		// when the Manager ends. This requires the binary to immediately end when the
-		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
-		// speeds up voluntary leader transitions as the new leader don't have to wait
-		// LeaseDuration time first.
-		//
-		// In the default scaffold provided, the program ends immediately after
-		// the manager stops, so would be fine to enable this option. However,
-		// if you are doing or is intended to do any operation such as perform cleanups
-		// after the manager stops then its usage might be unsafe.
-		// LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -80,7 +71,7 @@ func (d *DynamicUpdate) RunController() error {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		return err
 	}
