@@ -92,13 +92,19 @@ func setup(c *caddy.Controller) error {
 	})
 
 	c.OnShutdown(func() error {
+		log.Infof("Shutting down dynamicupdate plugin")
 		stopController()
+		return nil
+	})
+
+	c.OnShutdown(func() error {
+		// stop zones
+		d.OnShutdown()
 		return nil
 	})
 
 	for _, n := range zones.Names {
 		z := zones.Z[n]
-		c.OnShutdown(z.OnShutdown)
 		c.OnStartup(func() error {
 			z.StartupOnce.Do(func() { d.Reload(n, d.transfer) })
 			return nil

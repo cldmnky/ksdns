@@ -76,5 +76,7 @@ func (d *DynamicUpdate) RunController(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("controller exited")
+
 	return nil
 }

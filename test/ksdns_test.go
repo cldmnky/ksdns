@@ -187,6 +187,10 @@ var _ = Describe("zupd", func() {
 			recs, err = provider.Records(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(recs).To(HaveLen(7))
+
+			fmt.Fprintf(GinkgoWriter, "Running shutdown callbacks")
+			caddyInstance.ShutdownCallbacks()
+			fmt.Fprintf(GinkgoWriter, "Stopped caddy\n")
 		})
 
 		//It("should allow external dns", func() {
