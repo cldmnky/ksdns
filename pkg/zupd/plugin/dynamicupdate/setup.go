@@ -34,9 +34,12 @@ func setup(c *caddy.Controller) error {
 		return plugin.Error("dynamicupdate", err)
 	}
 
-	d.Client = d.mgr.GetClient()
+	client, err := client.New(Cfg, client.Options{})
+	if err != nil {
+		return plugin.Error("dynamicupdate", err)
+	}
+	d.Client = client
 
-	//d.Client = d.mgr.GetClient()
 	ctx, stopManager := context.WithCancel(context.Background())
 
 	c.OnStartup(func() error {
@@ -142,14 +145,12 @@ func (d DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
 		}
 		log.Infof("Namespaces: %v", d.Namespaces)
 	}
-	clnt, err := client.New(Cfg, client.Options{})
-	if err != nil {
-		return Zones{}, err
-	}
+
 	for _, n := range d.Namespaces {
 		// get all zones
+		// TODO check if namespace exists or is *
 		zones := &rfc1035v1alpha1.ZoneList{}
-		if err := clnt.List(context.Background(), zones, client.InNamespace(n)); err != nil {
+		if err := d.Client.List(context.Background(), zones, client.InNamespace(n)); err != nil {
 			return Zones{}, err
 		}
 		for _, zone := range zones.Items {
@@ -165,75 +166,5 @@ func (d DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
 			}
 		}
 	}
-	log.Debugf("Zones: %v", z)
-	/*
-			origins := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
-			if !filepath.IsAbs(fileName) && config.Root != "" {
-				fileName = filepath.Join(config.Root, fileName)
-			}
-
-			reader, err := os.Open(filepath.Clean(fileName))
-			if err != nil {
-				openErr = err
-			}
-
-			err = func() error {
-				defer reader.Close()
-
-				for i := range origins {
-					z[origins[i]] = file.NewZone(origins[i], fileName)
-					dz[origins[i]] = file.NewZone(origins[i], "")
-					if openErr == nil {
-						reader.Seek(0, 0)
-						zone, err := file.Parse(reader, origins[i], fileName, 0)
-						if err != nil {
-							return err
-						}
-						z[origins[i]] = zone
-					}
-					names = append(names, origins[i])
-				}
-				return nil
-			}()
-
-			if err != nil {
-				return Zones{}, err
-			}
-
-			for c.NextBlock() {
-				switch c.Val() {
-				case "reload":
-					t := c.RemainingArgs()
-					if len(t) < 1 {
-						return Zones{}, errors.New("reload duration value is expected")
-					}
-					d, err := time.ParseDuration(t[0])
-					if err != nil {
-						return Zones{}, plugin.Error("file", err)
-					}
-					reload = d
-				case "upstream":
-					// remove soon
-					c.RemainingArgs()
-
-				default:
-					return Zones{}, c.Errf("unknown property '%s'", c.Val())
-				}
-			}
-
-			for i := range origins {
-				z[origins[i]].ReloadInterval = 0 * time.Second
-				z[origins[i]].Upstream = upstream.New()
-			}
-		}
-
-		if openErr != nil {
-			if reload == 0 {
-				// reload hasn't been set make this a fatal error
-				return Zones{}, plugin.Error("file", openErr)
-			}
-			log.Warningf("Failed to open %q: trying again in %s", openErr, reload)
-		}
-	*/
 	return Zones{Z: z, Names: names, DynamicZones: dz}, nil
 }
