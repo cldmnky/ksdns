@@ -34,6 +34,7 @@ func (zs *ZoneSpec) GetZone() string {
 // ZoneStatus defines the observed state of Zone
 type ZoneStatus struct {
 	DynamicRRs []DynamicRR `json:"dynamicRRs,omitempty"`
+	Serial     uint32      `json:"serial,omitempty"`
 }
 
 func (zs *ZoneStatus) GetDynamicRRs() []DynamicRR {

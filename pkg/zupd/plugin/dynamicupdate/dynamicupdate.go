@@ -3,6 +3,7 @@ package dynamicupdate
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/coredns/coredns/plugin"
@@ -13,6 +14,8 @@ import (
 	"github.com/miekg/dns"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	rfc1035v1alpha1 "github.com/cldmnky/ksdns/api/v1alpha1"
 )
 
 // Types
@@ -43,7 +46,7 @@ type (
 )
 
 // ServeDNS implements the plugin.Handler interface.
-func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 	qname := state.Name()
 	zone := plugin.Zones(d.Zones.Names).Matches(qname)
@@ -73,6 +76,11 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 
 	// Handle dynamic update
 	if r.Opcode == dns.OpcodeUpdate {
+		var (
+			found     bool = false
+			zoneObj   rfc1035v1alpha1.Zone
+			soaSerial uint32 = uint32(time.Now().UnixMilli())
+		)
 		log.Infof("Handling dynamic update for %s", zone)
 		dz.RLock()
 
@@ -88,6 +96,7 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 					dz.RUnlock()
 					return dns.RcodeRefused, nil
 				}
+				// Get the record
 				h := rr.Header()
 				if _, ok := dns.IsDomainName(h.Name); ok {
 					switch updateType(h) {
@@ -98,6 +107,8 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 							dz.RUnlock()
 							return dns.RcodeServerFailure, nil
 						}
+						// get the zone from the cluster
+						// update the zone with the new record
 					case "remove":
 						log.Infof("Removing %s", rr.String())
 						dz.Delete(rr)
@@ -109,6 +120,37 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 				}
 			}
 		}
+		// Get the zone
+		for _, ns := range d.Namespaces {
+			if err := d.Client.Get(context.TODO(), client.ObjectKey{
+				Namespace: ns,
+				Name:      strings.TrimSuffix(zone, "."),
+			}, &zoneObj); err != nil {
+				continue
+			}
+			found = true
+			break
+		}
+		if !found {
+			log.Infof("Rejecting dynamic update for %s, object not found", zone)
+			return dns.RcodeRefused, nil
+		}
+		// Update the zone
+		zoneObj.Status.DynamicRRs = make([]rfc1035v1alpha1.DynamicRR, 0)
+		for _, el := range dz.All() {
+			for _, rr := range el.All() {
+				zoneObj.Status.DynamicRRs = append(zoneObj.Status.DynamicRRs, rfc1035v1alpha1.DynamicRR{
+					RR: rr.String(),
+				})
+			}
+		}
+		// set serial
+		zoneObj.Status.Serial = soaSerial
+		// Update the zone
+		if err := d.Client.Status().Update(context.TODO(), &zoneObj); err != nil {
+			log.Infof("Error updating zone object: %s", err.Error())
+			return dns.RcodeServerFailure, nil
+		}
 		z = d.Merge(zone)
 		// Update SOA serial
 		apex, err := z.ApexIfDefined()
@@ -119,7 +161,7 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		for _, rr := range apex {
 			// get the Soa record
 			if soa, ok := rr.(*dns.SOA); ok {
-				soa.Serial = uint32(time.Now().UnixMilli())
+				soa.Serial = soaSerial
 				if err := z.Insert(soa); err != nil {
 					log.Errorf("Failed to update SOA record: %s", err)
 					return dns.RcodeServerFailure, nil
@@ -127,7 +169,6 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 				log.Infof("Updated SOA serial to %d", soa.Serial)
 			}
 		}
-		dz.RUnlock()
 
 		// Notify other servers
 		if d.transfer != nil {
@@ -144,6 +185,7 @@ func (d DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dn
 		}
 		// log message
 		log.Infof("Dynamic update for %s from %s: %s", zone, state.IP(), m.String())
+		dz.RUnlock()
 		return dns.RcodeSuccess, nil
 	}
 	z = d.Merge(zone)

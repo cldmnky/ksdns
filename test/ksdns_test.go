@@ -21,7 +21,7 @@ import (
 )
 
 var _ = Describe("zupd", func() {
-	Context("zupd test", func() {
+	Context("Running the binary", func() {
 		var (
 			caddyInstance  *caddy.Instance
 			tcp, udp       string
@@ -104,72 +104,87 @@ var _ = Describe("zupd", func() {
 			caddyInstance.Stop()
 		})
 
-		It("should reply to external DNS", func() {
-			By("Invoking external DNS")
-			host, port, err := net.SplitHostPort(tcp)
-			Expect(err).ToNot(HaveOccurred())
-			portInt, err := strconv.Atoi(port)
-			Expect(err).ToNot(HaveOccurred())
-			provider, err := rfc2136.NewRfc2136Provider(
-				host,
-				portInt,
-				zoneName+".",
-				false,
-				fakeTsigKey,
-				fakeTsigSecret,
-				"hmac-sha256",
-				true,
-				endpoint.DomainFilter{
-					Filters: []string{},
-				},
-				false,
-				time.Duration(time.Second),
-				false,
-				"",
-				"",
-				"",
-				10,
-				nil,
-			)
-			Expect(err).ToNot(HaveOccurred())
-			recs, err := provider.Records(context.Background())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(recs).To(HaveLen(6))
+		Context("external-dns", func() {
+			It("should handle the external-dns rfc2136 provider", func() {
+				By("Invoking external DNS")
+				host, port, err := net.SplitHostPort(tcp)
+				Expect(err).ToNot(HaveOccurred())
+				portInt, err := strconv.Atoi(port)
+				Expect(err).ToNot(HaveOccurred())
+				provider, err := rfc2136.NewRfc2136Provider(
+					host,
+					portInt,
+					zoneName+".",
+					false,
+					fakeTsigKey,
+					fakeTsigSecret,
+					"hmac-sha256",
+					true,
+					endpoint.DomainFilter{
+						Filters: []string{},
+					},
+					false,
+					time.Duration(time.Second),
+					false,
+					"",
+					"",
+					"",
+					10,
+					nil,
+				)
+				Expect(err).ToNot(HaveOccurred())
+				recs, err := provider.Records(context.Background())
+				Expect(err).ToNot(HaveOccurred())
+				Expect(recs).To(HaveLen(6))
 
-			p := &plan.Changes{
-				Create: []*endpoint.Endpoint{
-					{
-						DNSName:    "foo.example.org",
-						RecordType: "A",
-						Targets:    []string{"1.2.3.4"},
-						RecordTTL:  endpoint.TTL(400),
+				p := &plan.Changes{
+					Create: []*endpoint.Endpoint{
+						{
+							DNSName:    "foo.example.org",
+							RecordType: "A",
+							Targets:    []string{"1.2.3.4"},
+							RecordTTL:  endpoint.TTL(400),
+						},
+						{
+							DNSName:    "foo.example.org",
+							RecordType: "TXT",
+							Targets:    []string{"boom"},
+						},
 					},
-					{
-						DNSName:    "foo.example.org",
-						RecordType: "TXT",
-						Targets:    []string{"boom"},
+					Delete: []*endpoint.Endpoint{
+						{
+							DNSName:    "vpn.example.org",
+							RecordType: "A",
+							Targets:    []string{"216.146.45.240"},
+						},
+						{
+							DNSName:    "vpn.example.org",
+							RecordType: "TXT",
+							Targets:    []string{"boom2"},
+						},
 					},
-				},
-				Delete: []*endpoint.Endpoint{
-					{
-						DNSName:    "vpn.example.org",
-						RecordType: "A",
-						Targets:    []string{"216.146.45.240"},
-					},
-					{
-						DNSName:    "vpn.example.org",
-						RecordType: "TXT",
-						Targets:    []string{"boom2"},
-					},
-				},
-			}
+				}
 
-			err = provider.ApplyChanges(context.Background(), p)
-			Expect(err).ToNot(HaveOccurred())
+				err = provider.ApplyChanges(context.Background(), p)
+				Expect(err).ToNot(HaveOccurred())
 
-			recs, err = provider.Records(context.Background())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(recs).To(HaveLen(8))
+				recs, err = provider.Records(context.Background())
+				Expect(err).ToNot(HaveOccurred())
+				Expect(recs).To(HaveLen(8))
+				Eventually(func() error {
+					// Check if the zone is updated
+					By("Checking if the zone is updated")
+					found := &rfc1035v1alpha1.Zone{}
+					err = k8sClient.Get(ctx, typeNamespaceName, found)
+					if err != nil {
+						return err
+					}
+					if len(found.Status.DynamicRRs) != 2 {
+						return fmt.Errorf("expected 2 records, got %d", len(found.Status.DynamicRRs))
+					}
+					return nil
+				}, time.Minute, time.Second).Should(Succeed())
+			})
 		})
 	})
 })

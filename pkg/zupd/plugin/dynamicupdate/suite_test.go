@@ -43,7 +43,7 @@ var testEnv *envtest.Environment
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	RunSpecs(t, "dynamicupdate Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -54,7 +54,7 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths:     []string{filepath.Join("../../../../", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 		// TODO fix this
-		//BinaryAssetsDirectory: filepath.Join("../../../../", "bin", "k8s", "1.25.0-darwin-arm64"),
+		BinaryAssetsDirectory: filepath.Join("../../../../", "bin", "k8s", "1.25.0-darwin-arm64"),
 	}
 
 	var err error

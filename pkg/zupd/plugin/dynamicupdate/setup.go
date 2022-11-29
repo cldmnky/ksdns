@@ -118,13 +118,13 @@ func setup(c *caddy.Controller) error {
 
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		d.Next = next
-		return d
+		return &d
 	})
 
 	return nil
 }
 
-func (d DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
+func (d *DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
 	z := make(map[string]*file.Zone)
 	dz := make(map[string]*file.Zone)
 	names := []string{}
