@@ -3,6 +3,7 @@ package dynamicupdate
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
@@ -11,6 +12,7 @@ import (
 	"github.com/coredns/coredns/plugin/metrics"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/transfer"
+	"github.com/miekg/dns"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -140,18 +142,30 @@ func (d DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
 		}
 		log.Infof("Namespaces: %v", d.Namespaces)
 	}
-	var zones rfc1035v1alpha1.ZoneList
 	clnt, err := client.New(Cfg, client.Options{})
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		return Zones{}, err
 	}
-	if err := clnt.List(context.Background(), &zones, client.InNamespace(d.Namespaces[0])); err != nil {
-		log.Errorf("Failed to list zones: %v", err)
+	for _, n := range d.Namespaces {
+		// get all zones
+		zones := &rfc1035v1alpha1.ZoneList{}
+		if err := clnt.List(context.Background(), zones, client.InNamespace(n)); err != nil {
+			return Zones{}, err
+		}
+		for _, zone := range zones.Items {
+			if _, ok := z[dns.Fqdn(zone.Name)]; !ok {
+				parsedZone, err := file.Parse(strings.NewReader(zone.Spec.Zone), dns.Fqdn(zone.Name), "stdin", 0)
+				if err != nil {
+					log.Errorf("Failed to parse zone %s: %v", zone.Name, err)
+					continue
+				}
+				z[dns.Fqdn(zone.Name)] = parsedZone
+				dz[dns.Fqdn(zone.Name)] = file.NewZone(dns.Fqdn(zone.Name), "")
+				names = append(names, dns.Fqdn(zone.Name))
+			}
+		}
 	}
-	log.Infof("Zones: %v", zones)
-	for _, zone := range zones.Items {
-		log.Infof("Zone: %v", zone.Name)
-	}
+	log.Debugf("Zones: %v", z)
 	/*
 			origins := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
 			if !filepath.IsAbs(fileName) && config.Root != "" {
