@@ -23,7 +23,7 @@ Store state in CRD's (status)
 ## Syntax
 
 ---
-dynamicupdate [CRD] [ZONES... ]
+dynamicupdate [NAMESPACES...]
 ---
 
 ---corefile

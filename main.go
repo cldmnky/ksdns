@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	rfc1035v1alpha1 "github.com/cldmnky/ksdns/api/v1alpha1"
-	"github.com/cldmnky/ksdns/pkg/zupd/plugin/dynamicupdate/controller"
+	"github.com/cldmnky/ksdns/pkg/zupd/plugin/dynamicupdate"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -87,7 +87,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.ZoneReconciler{
+	if err = (&dynamicupdate.ZoneReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {

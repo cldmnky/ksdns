@@ -8,8 +8,8 @@ import (
 	"time"
 
 	rfc1035v1alpha1 "github.com/cldmnky/ksdns/api/v1alpha1"
+	"github.com/cldmnky/ksdns/pkg/zupd/plugin/dynamicupdate"
 	"github.com/coredns/caddy"
-	"github.com/coredns/coredns/plugin/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -25,10 +25,10 @@ var _ = Describe("zupd", func() {
 		var (
 			caddyInstance  *caddy.Instance
 			tcp, udp       string
-			cleanups       []func()
 			fakeTsigKey    string = "example.org."
 			fakeTsigSecret string = "IwBTJx9wrDp4Y1RyC3H0gA=="
 			zoneName       string = "example.org"
+			err            error
 		)
 		const zupdName = "test-zupd"
 
@@ -47,39 +47,13 @@ var _ = Describe("zupd", func() {
 			By("Creating the Namespace to perform the tests")
 			err := k8sClient.Create(ctx, namespace)
 			Expect(err).To(Not(HaveOccurred()))
-
-		})
-
-		AfterEach(func() {
-			By("Deleting the Namespace to perform the tests")
-			_ = k8sClient.Delete(ctx, namespace)
-		})
-
-		It("should reply to external DNS", func() {
 			By("Starting ksdns")
-			name, rm, err := test.TempFile("/tmp", exampleOrg2)
-			Expect(err).ToNot(HaveOccurred())
-			cleanups = append(cleanups, rm)
-
-			kubeconfig, rmKC, err := kubeConfigFromRestConfig(cfg, "default")
-			Expect(err).ToNot(HaveOccurred())
-			cleanups = append(cleanups, rmKC)
-
-			dir, rmDir, err := writeKubeClientCerts("/tmp", cfg.CAData, cfg.CertData, cfg.KeyData)
-			Expect(err).ToNot(HaveOccurred())
-			cleanups = append(cleanups, rmDir)
-
 			// Corefile
 			corefile := `example.org:1053 {
 				debug
 				prometheus localhost:9253
-				kubeapi {
-					endpoint ` + cfg.Host + `
-					tls ` + dir + `/cert.pem ` + dir + `/key.pem ` + dir + `/ca.pem
-					kubeconfig ` + kubeconfig + ` default-context
-				}
 				bind 127.0.0.1
-				dynamicupdate ` + name + `
+				dynamicupdate ` + zupdName + `
 				transfer {
 					to * 
 					to 192.168.1.1
@@ -89,17 +63,27 @@ var _ = Describe("zupd", func() {
 					require all
 				}
 			}`
+			dynamicupdate.Cfg = cfg
 			caddyInstance, udp, tcp, err = CoreDNSServerAndPorts(corefile)
 			Expect(err).To(Not(HaveOccurred()))
-
 			// ginkolog
 			fmt.Fprintf(GinkgoWriter, "Started zupd, udp: %s, tcp: %s\n", udp, tcp)
-			//defer caddyInstance.ShutdownCallbacks()
-			defer caddyInstance.Stop()
-			By("Cleaning up")
-			for _, cleanup := range cleanups {
-				defer cleanup()
+
+		})
+
+		AfterEach(func() {
+			By("Deleting the Namespace to perform the tests")
+			_ = k8sClient.Delete(ctx, namespace)
+			By("Stopping ksdns")
+			fmt.Fprintf(GinkgoWriter, "Running shutdown callbacks")
+			errs := caddyInstance.ShutdownCallbacks()
+			for _, err := range errs {
+				fmt.Fprintf(GinkgoWriter, "Error during shutdown: %v", err)
 			}
+			caddyInstance.Stop()
+		})
+
+		It("should reply to external DNS", func() {
 
 			By("Creating a new zone")
 			zone := &rfc1035v1alpha1.Zone{

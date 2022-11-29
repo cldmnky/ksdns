@@ -11,8 +11,8 @@ import (
 	"github.com/coredns/coredns/plugin/transfer"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // Types
@@ -23,11 +23,16 @@ type (
 		Next plugin.Handler
 		// Zones holds the configuration for the zones handled by this plugin.
 		Zones Zones
+		// Namspaces holds the configuration for the namespaces handled by this plugin.
+		Namespaces []string
 		// transfer implements the transfer plugin.
-		transfer   *transfer.Transfer
-		metrics    *metrics.Metrics
-		client     client.Client
-		restConfig *rest.Config
+		transfer *transfer.Transfer
+		// metrics implements the metrics plugin.
+		metrics *metrics.Metrics
+		// Client is the client used to communicate with the kubernetes API server.
+		Client client.Client
+		// mgr is the manager used to run the controller.
+		mgr manager.Manager
 	}
 
 	Zones struct {

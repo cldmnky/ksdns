@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package dynamicupdate
 
 import (
 	"path/filepath"
@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	rfc1035v1alpha1 "github.com/cldmnky/ksdns/api/v1alpha1"
-	"k8s.io/client-go/kubernetes/scheme"
+	runtimescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -51,10 +51,10 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("../../../../../", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("../../../../", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 		// TODO fix this
-		BinaryAssetsDirectory: filepath.Join("../../../../../", "bin", "k8s", "1.25.0-darwin-arm64"),
+		BinaryAssetsDirectory: filepath.Join("../../../../", "bin", "k8s", "1.25.0-darwin-arm64"),
 	}
 
 	var err error
@@ -63,10 +63,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = rfc1035v1alpha1.AddToScheme(scheme.Scheme)
+	err = rfc1035v1alpha1.AddToScheme(runtimescheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	k8sClient, err = client.New(cfg, client.Options{Scheme: runtimescheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
