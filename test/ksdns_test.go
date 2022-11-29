@@ -28,7 +28,6 @@ var _ = Describe("zupd", func() {
 			fakeTsigKey    string = "example.org."
 			fakeTsigSecret string = "IwBTJx9wrDp4Y1RyC3H0gA=="
 			zoneName       string = "example.org"
-			err            error
 		)
 		const zupdName = "test-zupd"
 
@@ -47,6 +46,28 @@ var _ = Describe("zupd", func() {
 			By("Creating the Namespace to perform the tests")
 			err := k8sClient.Create(ctx, namespace)
 			Expect(err).To(Not(HaveOccurred()))
+
+			By("Creating a new zone")
+			zone := &rfc1035v1alpha1.Zone{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      zoneName,
+					Namespace: zupdName,
+				},
+				Spec: rfc1035v1alpha1.ZoneSpec{
+					Zone: exampleOrg,
+				},
+			}
+			err = k8sClient.Get(ctx, typeNamespaceName, zone)
+			Expect(err).To(HaveOccurred())
+			err = k8sClient.Create(ctx, zone)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking if the zone is created")
+			Eventually(func() error {
+				found := &rfc1035v1alpha1.Zone{}
+				return k8sClient.Get(ctx, typeNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
 			By("Starting ksdns")
 			// Corefile
 			corefile := `example.org:1053 {
@@ -84,28 +105,6 @@ var _ = Describe("zupd", func() {
 		})
 
 		It("should reply to external DNS", func() {
-
-			By("Creating a new zone")
-			zone := &rfc1035v1alpha1.Zone{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      zoneName,
-					Namespace: zupdName,
-				},
-				Spec: rfc1035v1alpha1.ZoneSpec{
-					Zone: exampleOrg,
-				},
-			}
-			err = k8sClient.Get(ctx, typeNamespaceName, zone)
-			Expect(err).To(HaveOccurred())
-			err = k8sClient.Create(ctx, zone)
-			Expect(err).ToNot(HaveOccurred())
-
-			By("Checking if the zone is created")
-			Eventually(func() error {
-				found := &rfc1035v1alpha1.Zone{}
-				return k8sClient.Get(ctx, typeNamespaceName, found)
-			}, time.Minute, time.Second).Should(Succeed())
-
 			By("Invoking external DNS")
 			host, port, err := net.SplitHostPort(tcp)
 			Expect(err).ToNot(HaveOccurred())

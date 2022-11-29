@@ -12,6 +12,9 @@ import (
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/transfer"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	rfc1035v1alpha1 "github.com/cldmnky/ksdns/api/v1alpha1"
 )
 
 var (
@@ -28,6 +31,8 @@ func setup(c *caddy.Controller) error {
 	if err := d.NewManager(Cfg); err != nil {
 		return plugin.Error("dynamicupdate", err)
 	}
+
+	d.Client = d.mgr.GetClient()
 
 	//d.Client = d.mgr.GetClient()
 	ctx, stopManager := context.WithCancel(context.Background())
@@ -134,6 +139,18 @@ func (d DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
 			d.Namespaces = append(d.Namespaces, c.Val())
 		}
 		log.Infof("Namespaces: %v", d.Namespaces)
+	}
+	var zones rfc1035v1alpha1.ZoneList
+	clnt, err := client.New(Cfg, client.Options{})
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	if err := clnt.List(context.Background(), &zones, client.InNamespace(d.Namespaces[0])); err != nil {
+		log.Errorf("Failed to list zones: %v", err)
+	}
+	log.Infof("Zones: %v", zones)
+	for _, zone := range zones.Items {
+		log.Infof("Zone: %v", zone.Name)
 	}
 	/*
 			origins := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
