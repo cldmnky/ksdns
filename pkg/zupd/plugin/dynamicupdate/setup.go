@@ -165,6 +165,19 @@ func (d *DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
 				names = append(names, dns.Fqdn(zone.Name))
 			}
 		}
+		// Read status of zones, add to DynamicRRs
+		for _, zone := range zones.Items {
+			if _, ok := z[dns.Fqdn(zone.Name)]; ok {
+				for _, rr := range zone.Status.DynamicRRs {
+					newRR, err := dns.NewRR(rr.RR)
+					if err != nil {
+						log.Errorf("Failed to parse RR %s: %v", rr, err)
+						continue
+					}
+					dz[dns.Fqdn(zone.Name)].Insert(newRR)
+				}
+			}
+		}
 	}
 	return Zones{Z: z, Names: names, DynamicZones: dz}, nil
 }

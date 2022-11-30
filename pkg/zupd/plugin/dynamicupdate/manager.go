@@ -26,9 +26,9 @@ func init() {
 func (d *DynamicUpdate) NewManager(cfg *rest.Config) error {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                  scheme,
-		MetricsBindAddress:      ":8080",
-		Port:                    9443,
-		HealthProbeBindAddress:  ":8081",
+		MetricsBindAddress:      "0",
+		Port:                    0,
+		HealthProbeBindAddress:  "0",
 		LeaderElection:          false,
 		LeaderElectionID:        "3deb8c7a.ksdns.io",
 		LeaderElectionNamespace: "ksdns-system",

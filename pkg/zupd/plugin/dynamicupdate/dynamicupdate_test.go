@@ -87,7 +87,8 @@ var _ = Describe("zupd", func() {
 						},
 						Names: []string{exampleOrgZone},
 					},
-					Next: test.ErrorHandler(),
+					Next:       test.ErrorHandler(),
+					Namespaces: []string{zupdName},
 				}
 				ctx := context.TODO()
 
