@@ -12,10 +12,21 @@ Zones are created and managed using `CRDs`.
 
 `ksdns` can provide "service domains" for clusters. A service domain is a delegated domain that may be used by external-dns to update records dynamically. This also enables the use of cert-manager to provide public let's encrypt certificates for internal services.
 
-### Example
+### Getting started
 
-1. Register a domain in AWS R53 (Or any supporter provider for cert-manager)
+1. Register a domain in AWS R53 (Or any supported provider for cert-manager)
 2. Deploy `ksdns` and setup a delegated zone pointing to the `CoreDNS` service external-ip (or use your internal DNS to forward queries for the delegated domain)
+
+```zone
+blahonga.me	NS	Simple                      -   ns-2035.awsdns-62.co.uk.
+                                                ns-1013.awsdns-62.net.
+                                                ns-325.awsdns-40.com.
+                                                ns-1250.awsdns-28.org.
+blahonga.me	SOA	Simple                      -   ns-2035.awsdns-62.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400
+ksdns.blahonga.me               A   Simple  -   127.0.0.1 ; glue record
+cluster-1.blahonga.me   NS  Simple  -   ksdns.blahonga.me ; The service domain
+```
+
 3. Deploy external-dns in a cluster and setup a RFC2136 provider using the `zupd` service.
 4. Deploy cert-manager and setup dns verification for the public zone in R53.
 
@@ -23,7 +34,7 @@ External-dns will now create records in the (internal) delegated zone for the cl
 
 If you need a let's encrypt cert, request a cert for a record in `ksdns`. Cert-manager will setup the DNS verification in the public R53 zone and `ksdns` will make sure that the service is resolvable inside your network.
 
-zone: blahonga.nu in R53, <cluster>.service.blahonga.nu delegation setup in R53, pointing to the `ksdns` `CoreDNS`deployment.
+zone: blahonga.me in R53, <cluster>.service.blahonga.me delegation setup in R53, pointing to the `ksdns` `CoreDNS`deployment.
 
 ## Getting Started
 
