@@ -15,17 +15,47 @@ Zones are created and managed using `CRDs`.
 ### Getting started
 
 1. Register a domain in AWS R53 (Or any supported provider for cert-manager)
-2. Deploy `ksdns` and setup a delegated zone pointing to the `CoreDNS` service external-ip (or use your internal DNS to forward queries for the delegated domain)
+2. Deploy `ksdns` and setup a delegated zone pointing to the `CoreDNS` service external-ip.
 
-```zone
-blahonga.me	NS	Simple                      -   ns-2035.awsdns-62.co.uk.
-                                                ns-1013.awsdns-62.net.
-                                                ns-325.awsdns-40.com.
-                                                ns-1250.awsdns-28.org.
-blahonga.me	SOA	Simple                      -   ns-2035.awsdns-62.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400
-ksdns.blahonga.me               A   Simple  -   127.0.0.1 ; glue record
-cluster-1.blahonga.me   NS  Simple  -   ksdns.blahonga.me ; The service domain
-```
+    ```zone
+    blahonga.me NS  Simple                      -   xxx.awsdns-62.co.uk.
+                                                    xxx.awsdns-62.net.
+                                                    xxx.awsdns-40.com.
+                                                    xxx.awsdns-28.org.
+    blahonga.me SOA Simple                      -   xxx.awsdns-62.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400
+    
+    ksdns.blahonga.me   A   Simple  -   192.168.1.1 ; glue record pointing to ksdns
+    service.blahonga.me NS  Simple  -   ksdns.blahonga.me ; delegated domain
+    ```
+
+    Create the zone object for ksdns:
+
+    ```yaml
+    apiVersion: rfc1035.ksdns.io/v1alpha1
+    kind: Zone
+    metadata:
+        labels:
+            app.kubernetes.io/name: zone
+            app.kubernetes.io/instance: zone-service.blahonga.me
+        name: service.blahonga.me
+    spec:
+    zone: |
+        ; service.blahonga.me zone
+        $ORIGIN service.blahonga.me.
+        @                      3600 SOA   ksdns.blahonga.me (
+                                    zone-admin.blahonga.corp.     ; address of responsible party
+                                    20160727                   ; serial number, not used
+                                    3600                       ; refresh period
+                                    600                        ; retry period
+                                    604800                     ; expire time
+                                    1800                     ) ; minimum ttl
+                              86400 NS    ksdns.blahonga.me.
+        mail                  14400 A     204.13.248.106
+        vpn                      60 A     216.146.45.240
+        webapp                   60 A     216.146.46.10
+        webapp                   60 A     216.146.46.11
+        service               IN    SRV   8080 10 10 @
+    ```
 
 3. Deploy external-dns in a cluster and setup a RFC2136 provider using the `zupd` service.
 4. Deploy cert-manager and setup dns verification for the public zone in R53.

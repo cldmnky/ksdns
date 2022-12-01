@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/coredns/coredns/plugin"
@@ -25,7 +26,7 @@ type (
 		// Next plugin in the chain.
 		Next plugin.Handler
 		// Zones holds the configuration for the zones handled by this plugin.
-		Zones Zones
+		Zones *Zones
 		// Namspaces holds the configuration for the namespaces handled by this plugin.
 		Namespaces []string
 		// transfer implements the transfer plugin.
@@ -35,13 +36,15 @@ type (
 		// Client is the client used to communicate with the kubernetes API server.
 		Client client.Client
 		// mgr is the manager used to run the controller.
-		mgr manager.Manager
+		mgr        manager.Manager
+		tsigSecret map[string]string
 	}
 
 	Zones struct {
 		Z            map[string]*file.Zone
 		Names        []string
 		DynamicZones map[string]*file.Zone
+		sync.RWMutex
 	}
 )
 
@@ -56,7 +59,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 	z, ok := d.Zones.Z[zone]
 	if !ok || z == nil {
-		return dns.RcodeNotAuth, nil
+		return dns.RcodeServerFailure, nil
 	}
 
 	dz, ok := d.Zones.DynamicZones[zone]
@@ -172,7 +175,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 		// Notify other servers
 		if d.transfer != nil {
-			log.Infof("Notifying other servers of update")
+			log.Infof("Notifying other  qservers of update")
 			d.transfer.Notify(zone)
 		}
 

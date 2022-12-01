@@ -18,9 +18,12 @@ package dynamicupdate
 
 import (
 	"context"
+	"strings"
 
+	"github.com/coredns/coredns/plugin/file"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/go-logr/logr"
+	"github.com/miekg/dns"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -46,9 +49,6 @@ func (r *ZoneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	log := clog.NewWithPlugin("dynamicupdate")
 	log.Infof("Reconciling Zone %s/%s", req.Namespace, req.Name)
 
-	// Fetch the Memcached instance
-	// The purpose is check if the Custom Resource for the Kind Memcached
-	// is applied on the cluster if not we return nil to stop the reconciliation
 	zone := &rfc1035v1alpha1.Zone{}
 	err := r.Get(ctx, req.NamespacedName, zone)
 	if err != nil {
@@ -63,7 +63,34 @@ func (r *ZoneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// TODO(user): your logic here
+	r.zones.RLock()
+	defer r.zones.RUnlock()
+
+	if r.zones.DynamicZones == nil {
+		r.zones.DynamicZones = make(map[string]*file.Zone)
+	}
+	if r.zones.Z == nil {
+		r.zones.Z = make(map[string]*file.Zone)
+	}
+
+	if _, ok := r.zones.Z[dns.Fqdn(zone.Name)]; !ok {
+		parsedZone, err := file.Parse(strings.NewReader(zone.Spec.Zone), dns.Fqdn(zone.Name), "stdin", 0)
+		if err != nil {
+			log.Errorf("Failed to parse zone %s: %v", zone.Name, err)
+			return ctrl.Result{}, err
+		}
+		r.zones.Z[dns.Fqdn(zone.Name)] = parsedZone
+		r.zones.DynamicZones[dns.Fqdn(zone.Name)] = file.NewZone(dns.Fqdn(zone.Name), "")
+		r.zones.Names = append(r.zones.Names, dns.Fqdn(zone.Name))
+
+	} else {
+		parsedZone, err := file.Parse(strings.NewReader(zone.Spec.Zone), dns.Fqdn(zone.Name), "stdin", 0)
+		if err != nil {
+			log.Errorf("Failed to parse zone %s: %v", zone.Name, err)
+			return ctrl.Result{}, err
+		}
+		r.zones.Z[dns.Fqdn(zone.Name)] = parsedZone
+	}
 
 	return ctrl.Result{}, nil
 }

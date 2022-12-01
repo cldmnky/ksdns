@@ -42,7 +42,7 @@ func (d *DynamicUpdate) NewManager(cfg *rest.Config) error {
 		Client: mgr.GetClient(),
 		log:    ctrl.Log.WithName("controllers").WithName("Zone"),
 		Scheme: mgr.GetScheme(),
-		zones:  &d.Zones,
+		zones:  d.Zones,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Zone")
 		return err

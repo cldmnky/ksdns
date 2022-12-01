@@ -20,26 +20,30 @@ import (
 var _ = Describe("zupd", func() {
 	Context("Running the binary", func() {
 		var (
-			fakeTsigKey string = "example.org."
+			//fakeTsigKey string = "example.org."
 			//fakeTsigSecret string = "IwBTJx9wrDp4Y1RyC3H0gA=="
-			zoneName string = "example.org"
+			zoneName          string = "example.org"
+			d                 *DynamicUpdate
+			zupdName          string = "test-zupd"
+			namespace         *corev1.Namespace
+			typeNamespaceName types.NamespacedName
 		)
-		const zupdName = "test-zupd"
 
 		ctx := context.Background()
-
-		namespace := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      zupdName,
-				Namespace: zupdName,
-			},
-		}
-
-		typeNamespaceName := types.NamespacedName{Name: zoneName, Namespace: zupdName}
 
 		BeforeEach(func() {
 			Cfg = cfg
 			By("Creating the Namespace to perform the tests")
+			// Create a timestamped namespace to avoid conflicts
+			zupdName = zupdName + "-" + time.Now().Format("20060102150405")
+			typeNamespaceName = types.NamespacedName{Name: zoneName, Namespace: zupdName}
+
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      zupdName,
+					Namespace: zupdName,
+				},
+			}
 			err := k8sClient.Create(ctx, namespace)
 			Expect(err).To(Not(HaveOccurred()))
 
@@ -62,41 +66,41 @@ var _ = Describe("zupd", func() {
 			Eventually(func() error {
 				found := &rfc1035v1alpha1.Zone{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
-			}, time.Minute, time.Second).Should(Succeed())
+			}, time.Second*20, time.Second).Should(Succeed())
 
+			By("Creating a dynamicupdate plugin")
+			testZone, err := file.Parse(strings.NewReader(exampleOrg), exampleOrgZone, "stdin", 0)
+			Expect(err).ToNot(HaveOccurred())
+			dynamicZone := file.NewZone(exampleOrgZone, "")
+			d = &DynamicUpdate{
+				Zones: &Zones{
+					Z: map[string]*file.Zone{
+						exampleOrgZone: testZone,
+					},
+					DynamicZones: map[string]*file.Zone{
+						exampleOrgZone: dynamicZone,
+					},
+					Names: []string{exampleOrgZone},
+				},
+				Next:       test.ErrorHandler(),
+				Namespaces: []string{zupdName},
+				Client:     k8sClient,
+			}
 		})
 
 		AfterEach(func() {
 			By("Deleting the Namespace to perform the tests")
-			_ = k8sClient.Delete(ctx, namespace)
+			err := k8sClient.Delete(ctx, namespace)
+			Expect(err).To(Not(HaveOccurred()))
 		})
 
 		Context("Allowed Types", func() {
 			It("should allow types supported", func() {
-				By("Creating a dynamicupdate plugin")
-				zone, err := file.Parse(strings.NewReader(exampleOrg), exampleOrgZone, "stdin", 0)
-				Expect(err).ToNot(HaveOccurred())
-				dynamicZone := file.NewZone(exampleOrgZone, "")
-				d := DynamicUpdate{
-					Zones: Zones{
-						Z: map[string]*file.Zone{
-							exampleOrgZone: zone,
-						},
-						DynamicZones: map[string]*file.Zone{
-							exampleOrgZone: dynamicZone,
-						},
-						Names: []string{exampleOrgZone},
-					},
-					Next:       test.ErrorHandler(),
-					Namespaces: []string{zupdName},
-				}
-				ctx := context.TODO()
 
 				// Test allowed types
 				// A
 				m := new(dns.Msg)
 				m.SetUpdate("example.org.")
-				m.SetTsig(fakeTsigKey, dns.HmacSHA256, 300, time.Now().Unix())
 				m.Insert([]dns.RR{testRR("insert.example.org 3600 IN A 127.0.0.1")})
 				rec := dnstest.NewRecorder(&test.ResponseWriter{})
 				code, err := d.ServeDNS(ctx, rec, m)
@@ -110,99 +114,21 @@ var _ = Describe("zupd", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(code).To(Equal(dns.RcodeSuccess))
 				Expect(rec.Msg.Answer).To(HaveLen(1))
+				Expect(rec.Msg.Answer[0].String()).To(Equal("insert.example.org.\t3600\tIN\tA\t127.0.0.1"))
+			})
+			It("should not allow types not supported", func() {
+				// NS should be refused
+				m := new(dns.Msg)
+				m.SetUpdate("example.org.")
+				m.Insert([]dns.RR{testRR("insert.example.org 3600 IN NS ns1.example.org.")})
+				rec := dnstest.NewRecorder(&test.ResponseWriter{})
+				code, err := d.ServeDNS(ctx, rec, m)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(code).To(Equal(dns.RcodeRefused))
 			})
 		})
 	})
 })
-
-/* func TestDynamicUpdateAllowedTypes(t *testing.T) {
-	zone, err := file.Parse(strings.NewReader(exampleOrg), exampleOrgZone, "stdin", 0)
-	require.NoError(t, err)
-	dynamicZone := file.NewZone(exampleOrgZone, "")
-	d := DynamicUpdate{
-		Zones: Zones{
-			Z: map[string]*file.Zone{
-				exampleOrgZone: zone,
-			},
-			DynamicZones: map[string]*file.Zone{
-				exampleOrgZone: dynamicZone,
-			},
-			Names: []string{exampleOrgZone},
-		},
-		Next: test.ErrorHandler(),
-	}
-	ctx := context.TODO()
-
-	// Test allowed types
-	// A
-	m := new(dns.Msg)
-	m.SetUpdate("example.org.")
-	m.SetTsig(fakeTsigKey, dns.HmacSHA256, 300, time.Now().Unix())
-	m.Insert([]dns.RR{testRR(t, "insert.example.org 3600 IN A 127.0.0.1")})
-	rec := dnstest.NewRecorder(&test.ResponseWriter{})
-	code, err := d.ServeDNS(ctx, rec, m)
-	require.NoError(t, err)
-	require.Equal(t, dns.RcodeSuccess, code)
-	// Lookup the record
-	m = new(dns.Msg)
-	m.SetQuestion("insert.example.org.", dns.TypeA)
-	rec = dnstest.NewRecorder(&test.ResponseWriter{})
-	code, err = d.ServeDNS(ctx, rec, m)
-	require.NoError(t, err)
-	require.Equal(t, dns.RcodeSuccess, code)
-	require.Len(t, rec.Msg.Answer, 1)
-
-	// AAAA
-	m = new(dns.Msg)
-	m.SetUpdate("example.org.")
-	m.SetTsig(fakeTsigKey, dns.HmacSHA256, 300, time.Now().Unix())
-	m.Insert([]dns.RR{testRR(t, "insert.example.org 3600 IN AAAA ::1")})
-	rec = dnstest.NewRecorder(&test.ResponseWriter{})
-	code, err = d.ServeDNS(ctx, rec, m)
-	require.NoError(t, err)
-	require.Equal(t, dns.RcodeSuccess, code)
-
-	// CNAME
-	m = new(dns.Msg)
-	m.SetUpdate("example.org.")
-	m.SetTsig(fakeTsigKey, dns.HmacSHA256, 300, time.Now().Unix())
-	m.Insert([]dns.RR{testRR(t, "insert.example.org 3600 IN CNAME example.org.")})
-	rec = dnstest.NewRecorder(&test.ResponseWriter{})
-	code, err = d.ServeDNS(ctx, rec, m)
-	require.NoError(t, err)
-	require.Equal(t, dns.RcodeSuccess, code)
-
-	// TXT
-	m = new(dns.Msg)
-	m.SetUpdate("example.org.")
-	m.SetTsig(fakeTsigKey, dns.HmacSHA256, 300, time.Now().Unix())
-	m.Insert([]dns.RR{testRR(t, "insert.example.org 3600 IN TXT \"test\"")})
-	rec = dnstest.NewRecorder(&test.ResponseWriter{})
-	code, err = d.ServeDNS(ctx, rec, m)
-	require.NoError(t, err)
-	require.Equal(t, dns.RcodeSuccess, code)
-
-	// SRV
-	m = new(dns.Msg)
-	m.SetUpdate("example.org.")
-	m.SetTsig(fakeTsigKey, dns.HmacSHA256, 300, time.Now().Unix())
-	m.Insert([]dns.RR{testRR(t, "_sip._tcp.example.org. 3600 IN SRV 0 5 5060 sip.example.org.")})
-	rec = dnstest.NewRecorder(&test.ResponseWriter{})
-	code, err = d.ServeDNS(ctx, rec, m)
-	require.NoError(t, err)
-	require.Equal(t, dns.RcodeSuccess, code)
-
-	// NS should be refused
-	m = new(dns.Msg)
-	m.SetUpdate("example.org.")
-	m.SetTsig(fakeTsigKey, dns.HmacSHA256, 300, time.Now().Unix())
-	m.Insert([]dns.RR{testRR(t, "insert.example.org 3600 IN NS ns1.example.org.")})
-	rec = dnstest.NewRecorder(&test.ResponseWriter{})
-	code, err = d.ServeDNS(ctx, rec, m)
-	require.NoError(t, err)
-	require.Equal(t, dns.RcodeRefused, code)
-
-} */
 
 func testRR(s string) dns.RR {
 	r, err := dns.NewRR(s)

@@ -26,4 +26,18 @@ webapp                   60 A     216.146.46.11
 www                   43200 CNAME example.org.
 `
 	exampleOrgZone = "example.org."
+
+	exampleOrgUpdated = `; example.org test file
+$ORIGIN example.org.
+@                      3600 SOA   ns1.p30.ksdns.net. (
+                              zone-admin.dyndns.org.     ; address of responsible party
+                              20160727                   ; serial number
+                              3600                       ; refresh period
+                              600                        ; retry period
+                              604800                     ; expire time
+                              1800                     ) ; minimum ttl
+                      86400 NS    ns1.p30.ksdns.net.
+                      86400 NS    ns2.p30.ksdns.net.
+newapp                   60 A     216.146.46.11
+`
 )

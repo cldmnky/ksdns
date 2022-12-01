@@ -55,6 +55,8 @@ func setup(c *caddy.Controller) error {
 		} else {
 			return plugin.Error("transfer plugin is required", fmt.Errorf("must be enabled in Corefile"))
 		}
+		config := dnsserver.GetConfig(c)
+		d.tsigSecret = config.TsigSecret
 		return nil
 	})
 
@@ -84,7 +86,7 @@ func setup(c *caddy.Controller) error {
 	if err != nil {
 		return plugin.Error("dynamicupdate", err)
 	}
-	d.Zones = zones
+	d.Zones = &zones
 
 	c.OnStartup(func() error {
 		go func() {
