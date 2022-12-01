@@ -84,7 +84,7 @@ var _ = Describe("zupd", func() {
 				},
 				Next:       test.ErrorHandler(),
 				Namespaces: []string{zupdName},
-				Client:     k8sClient,
+				K8sClient:  k8sClient,
 			}
 		})
 

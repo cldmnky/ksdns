@@ -22,32 +22,21 @@ import (
 
 	"github.com/coredns/coredns/plugin/file"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
-	"github.com/go-logr/logr"
 	"github.com/miekg/dns"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	klog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	rfc1035v1alpha1 "github.com/cldmnky/ksdns/api/v1alpha1"
 )
 
-// ZoneReconciler reconciles a Zone object
-type ZoneReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
-	log    logr.Logger
-	zones  *Zones
-}
-
 // +kubebuilder:rbac:groups=rfc1035.ksdns.io,resources=zones,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rfc1035.ksdns.io,resources=zones/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=rfc1035.ksdns.io,resources=zones/finalizers,verbs=update
-func (r *ZoneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *DynamicUpdate) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := klog.FromContext(ctx)
 	log := clog.NewWithPlugin("dynamicupdate")
-	log.Infof("Reconciling Zone %s/%s", req.Namespace, req.Name)
 
 	zone := &rfc1035v1alpha1.Zone{}
 	err := r.Get(ctx, req.NamespacedName, zone)
@@ -63,41 +52,62 @@ func (r *ZoneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	r.zones.RLock()
-	defer r.zones.RUnlock()
-
-	if r.zones.DynamicZones == nil {
-		r.zones.DynamicZones = make(map[string]*file.Zone)
+	// Handle deletion
+	if isDeleting(zone) {
+		log.Debugf("Zone %s/%s is being deleted", req.Namespace, req.Name)
+		if _, ok := r.Zones.Z[dns.Fqdn(zone.Name)]; ok {
+			log.Debugf("Zone %s/%s is being deleted", req.Namespace, req.Name)
+			r.Zones.DeleteZone(dns.Fqdn(zone.Name))
+			return ctrl.Result{}, nil
+		}
 	}
-	if r.zones.Z == nil {
-		r.zones.Z = make(map[string]*file.Zone)
-	}
 
-	if _, ok := r.zones.Z[dns.Fqdn(zone.Name)]; !ok {
+	if r.Zones.DynamicZones == nil {
+		r.Zones.DynamicZones = make(map[string]*file.Zone)
+	}
+	if r.Zones.Z == nil {
+		r.Zones.Z = make(map[string]*file.Zone)
+	}
+	r.Zones.Lock()
+	defer r.Zones.Unlock()
+	if _, ok := r.Zones.Z[dns.Fqdn(zone.Name)]; !ok {
+		// Create a new zone
+		log.Debugf("Creating new zone %s", zone.Name)
 		parsedZone, err := file.Parse(strings.NewReader(zone.Spec.Zone), dns.Fqdn(zone.Name), "stdin", 0)
 		if err != nil {
 			log.Errorf("Failed to parse zone %s: %v", zone.Name, err)
 			return ctrl.Result{}, err
 		}
-		r.zones.Z[dns.Fqdn(zone.Name)] = parsedZone
-		r.zones.DynamicZones[dns.Fqdn(zone.Name)] = file.NewZone(dns.Fqdn(zone.Name), "")
-		r.zones.Names = append(r.zones.Names, dns.Fqdn(zone.Name))
+		r.Zones.Z[dns.Fqdn(zone.Name)] = parsedZone
+		r.Zones.DynamicZones[dns.Fqdn(zone.Name)] = file.NewZone(dns.Fqdn(zone.Name), "")
+		r.Zones.Names = append(r.Zones.Names, dns.Fqdn(zone.Name))
+		r.transfer.Notify(dns.Fqdn(zone.Name))
 
 	} else {
+		// Update the zone if it has changed, compare old and new object
+		//log.Debugf("Zone %s has changed", zone.Name)
 		parsedZone, err := file.Parse(strings.NewReader(zone.Spec.Zone), dns.Fqdn(zone.Name), "stdin", 0)
 		if err != nil {
 			log.Errorf("Failed to parse zone %s: %v", zone.Name, err)
 			return ctrl.Result{}, err
 		}
-		r.zones.Z[dns.Fqdn(zone.Name)] = parsedZone
+		r.Zones.Z[dns.Fqdn(zone.Name)] = parsedZone
+		r.transfer.Notify(dns.Fqdn(zone.Name))
+
 	}
 
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ZoneReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DynamicUpdate) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rfc1035v1alpha1.Zone{}).
+		// Ignore status-only changes
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
+}
+
+func isDeleting(zone *rfc1035v1alpha1.Zone) bool {
+	return !zone.ObjectMeta.GetDeletionTimestamp().IsZero()
 }

@@ -38,7 +38,7 @@ func setup(c *caddy.Controller) error {
 	if err != nil {
 		return plugin.Error("dynamicupdate", err)
 	}
-	d.Client = client
+	d.K8sClient = client
 
 	ctx, stopManager := context.WithCancel(context.Background())
 
@@ -55,8 +55,6 @@ func setup(c *caddy.Controller) error {
 		} else {
 			return plugin.Error("transfer plugin is required", fmt.Errorf("must be enabled in Corefile"))
 		}
-		config := dnsserver.GetConfig(c)
-		d.tsigSecret = config.TsigSecret
 		return nil
 	})
 
@@ -82,7 +80,7 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
-	zones, err := d.setupController(c)
+	zones, err := d.initialize(c)
 	if err != nil {
 		return plugin.Error("dynamicupdate", err)
 	}
@@ -126,7 +124,7 @@ func setup(c *caddy.Controller) error {
 	return nil
 }
 
-func (d *DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
+func (d *DynamicUpdate) initialize(c *caddy.Controller) (Zones, error) {
 	z := make(map[string]*file.Zone)
 	dz := make(map[string]*file.Zone)
 	names := []string{}
@@ -152,7 +150,7 @@ func (d *DynamicUpdate) setupController(c *caddy.Controller) (Zones, error) {
 		// get all zones
 		// TODO check if namespace exists or is *
 		zones := &rfc1035v1alpha1.ZoneList{}
-		if err := d.Client.List(context.Background(), zones, client.InNamespace(n)); err != nil {
+		if err := d.K8sClient.List(context.Background(), zones, client.InNamespace(n)); err != nil {
 			return Zones{}, err
 		}
 		for _, zone := range zones.Items {

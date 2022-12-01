@@ -70,10 +70,10 @@ var _ = Describe("zupd controller", func() {
 
 			By("Reconciling the custom resource created")
 			zones := &Zones{}
-			zoneReconciler := &ZoneReconciler{
+			zoneReconciler := &DynamicUpdate{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
-				zones:  zones,
+				Zones:  zones,
 			}
 			_, err = zoneReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespaceName,
@@ -81,13 +81,13 @@ var _ = Describe("zupd controller", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			By("Checking if the zone is updated")
-			zoneReconciler.zones.RLock()
-			Expect(zoneReconciler.zones.Z).To(HaveLen(1))
-			Expect(zoneReconciler.zones.Z[dns.Fqdn(zoneName)]).ToNot(BeNil())
-			Expect(zoneReconciler.zones.Names).To(HaveLen(1))
-			Expect(zoneReconciler.zones.Names).To(ContainElement(dns.Fqdn(zoneName)))
-			Expect(zoneReconciler.zones.Z[dns.Fqdn(zoneName)].All()).To(HaveLen(5))
-			zoneReconciler.zones.RUnlock()
+			zoneReconciler.Zones.RLock()
+			Expect(zoneReconciler.Zones.Z).To(HaveLen(1))
+			Expect(zoneReconciler.Zones.Z[dns.Fqdn(zoneName)]).ToNot(BeNil())
+			Expect(zoneReconciler.Zones.Names).To(HaveLen(1))
+			Expect(zoneReconciler.Zones.Names).To(ContainElement(dns.Fqdn(zoneName)))
+			Expect(zoneReconciler.Zones.Z[dns.Fqdn(zoneName)].All()).To(HaveLen(5))
+			zoneReconciler.Zones.RUnlock()
 
 			By("Updating the zone")
 			zone.Spec.Zone = exampleOrgUpdated
@@ -101,13 +101,13 @@ var _ = Describe("zupd controller", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			By("Checking if the zone is updated")
-			zoneReconciler.zones.RLock()
-			Expect(zoneReconciler.zones.Z).To(HaveLen(1))
-			Expect(zoneReconciler.zones.Z[dns.Fqdn(zoneName)]).ToNot(BeNil())
-			Expect(zoneReconciler.zones.Names).To(HaveLen(1))
-			Expect(zoneReconciler.zones.Names).To(ContainElement(dns.Fqdn(zoneName)))
-			Expect(zoneReconciler.zones.Z[dns.Fqdn(zoneName)].All()).To(HaveLen(1))
-			zoneReconciler.zones.RUnlock()
+			zoneReconciler.Zones.RLock()
+			Expect(zoneReconciler.Zones.Z).To(HaveLen(1))
+			Expect(zoneReconciler.Zones.Z[dns.Fqdn(zoneName)]).ToNot(BeNil())
+			Expect(zoneReconciler.Zones.Names).To(HaveLen(1))
+			Expect(zoneReconciler.Zones.Names).To(ContainElement(dns.Fqdn(zoneName)))
+			Expect(zoneReconciler.Zones.Z[dns.Fqdn(zoneName)].All()).To(HaveLen(1))
+			zoneReconciler.Zones.RUnlock()
 
 		})
 	})

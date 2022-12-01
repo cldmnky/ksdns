@@ -52,4 +52,19 @@ $ORIGIN new.example.org.
                       86400 NS    ns2.p30.ksdns.net.
 foo                   60 A     216.146.46.11
 `
+
+	newExampleOrgUpdated = `; new.example.org test zone
+$ORIGIN new.example.org.
+@                      3600 SOA   ns1.p30.ksdns.io. (
+                              zone-admin.ksdns.io.     ; address of responsible party
+                              20160727                   ; serial number
+                              3600                       ; refresh period
+                              600                        ; retry period
+                              604800                     ; expire time
+                              1800                     ) ; minimum ttl
+                      86400 NS    ns1.p30.ksdns.net.
+                      86400 NS    ns2.p30.ksdns.net.
+foo                   60 A        216.146.46.11
+bar                   60 A        192.168.1.1
+`
 )

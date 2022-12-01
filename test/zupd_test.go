@@ -190,8 +190,8 @@ var _ = Describe("zupd", func() {
 			})
 		})
 
-		Context("dynamicupdate adding zones", func() {
-			It("Should add new zones", func() {
+		Context("dynamicupdate zones", func() {
+			It("Should add and update zones", func() {
 				By("Adding a new zone")
 				newZone := &rfc1035v1alpha1.Zone{
 					ObjectMeta: metav1.ObjectMeta{
@@ -220,6 +220,52 @@ var _ = Describe("zupd", func() {
 					}
 					return nil
 				}, time.Second*6, time.Second*2).Should(Succeed())
+
+				By("Updating the zone")
+				updatedZone := &rfc1035v1alpha1.Zone{}
+				err = k8sClient.Get(ctx, types.NamespacedName{Name: "new.example.org", Namespace: zupdName}, updatedZone)
+				Expect(err).ToNot(HaveOccurred())
+				updatedZone.Spec.Zone = newExampleOrgUpdated
+				err = k8sClient.Update(ctx, updatedZone)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that the zone is updated")
+				Eventually(func() error {
+					zone, err := dnsQuery(udp, "bar.new.example.org.", dns.TypeA)
+					if err != nil {
+						return err
+					}
+					if len(zone.Answer) != 1 {
+						return fmt.Errorf("expected 1 answers, got %d", len(zone.Answer))
+					}
+					return nil
+				}, time.Second*6, time.Second*2).Should(Succeed())
+
+				By("Deleting the zone")
+				// get the zone again
+				updatedZone = &rfc1035v1alpha1.Zone{}
+				err = k8sClient.Get(ctx, types.NamespacedName{Name: "new.example.org", Namespace: zupdName}, updatedZone)
+				Expect(err).ToNot(HaveOccurred())
+				err = k8sClient.Delete(ctx, updatedZone)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that the zone is deleted")
+				Eventually(func() error {
+					found := &rfc1035v1alpha1.Zone{}
+					return k8sClient.Get(ctx, types.NamespacedName{Name: "new.example.org", Namespace: zupdName}, found)
+				}, time.Minute, time.Second).ShouldNot(Succeed())
+
+				By("Querying the deleted zone")
+				Eventually(func() error {
+					resp, err := dnsQuery(udp, "bar.new.example.org.", dns.TypeA)
+					if err != nil {
+						return err
+					}
+					if len(resp.Answer) != 0 {
+						return fmt.Errorf("expected 0 answers, got %d", len(resp.Answer))
+					}
+					return nil
+				}, time.Second*6, time.Second*2).Should(HaveOccurred())
 			})
 		})
 

@@ -13,6 +13,7 @@ import (
 	"github.com/coredns/coredns/plugin/transfer"
 	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -33,11 +34,15 @@ type (
 		transfer *transfer.Transfer
 		// metrics implements the metrics plugin.
 		metrics *metrics.Metrics
-		// Client is the client used to communicate with the kubernetes API server.
-		Client client.Client
+		// K8sClient is the client used to communicate with the kubernetes API server.
+		K8sClient client.Client
 		// mgr is the manager used to run the controller.
-		mgr        manager.Manager
-		tsigSecret map[string]string
+		mgr manager.Manager
+
+		// Client
+		client.Client
+		// Scheme
+		Scheme *runtime.Scheme
 	}
 
 	Zones struct {
@@ -47,6 +52,20 @@ type (
 		sync.RWMutex
 	}
 )
+
+func (z *Zones) DeleteZone(name string) {
+	z.Lock()
+	defer z.Unlock()
+	delete(z.Z, name)
+	delete(z.DynamicZones, name)
+	// delete from names
+	for i, n := range z.Names {
+		if n == name {
+			z.Names = append(z.Names[:i], z.Names[i+1:]...)
+			break
+		}
+	}
+}
 
 // ServeDNS implements the plugin.Handler interface.
 func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -85,7 +104,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 			soaSerial uint32 = uint32(time.Now().UnixMilli())
 		)
 		log.Infof("Handling dynamic update for %s", zone)
-		dz.RLock()
+		dz.Lock()
 
 		for range r.Question {
 			for _, rr := range r.Ns {
@@ -96,7 +115,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 					rr.Header().Rrtype != dns.TypeAAAA &&
 					rr.Header().Rrtype != dns.TypeSRV {
 					log.Infof("Rejecting dynamic update for %s: %s", zone, rr.Header().String())
-					dz.RUnlock()
+					dz.Unlock()
 					return dns.RcodeRefused, nil
 				}
 				// Get the record
@@ -107,7 +126,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 						log.Infof("Inserting %s", rr.String())
 						if err := dz.Insert(rr); err != nil {
 							log.Infof("Error inserting %s: %s", rr.String(), err.Error())
-							dz.RUnlock()
+							dz.Unlock()
 							return dns.RcodeServerFailure, nil
 						}
 						// get the zone from the cluster
@@ -117,15 +136,18 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 						dz.Delete(rr)
 					default:
 						log.Infof("Unknown update type for %s", rr.String())
-						dz.RUnlock()
+						dz.Unlock()
 						return dns.RcodeNotImplemented, nil
 					}
 				}
 			}
 		}
+		dz.Unlock()
+		dz.RLock()
+		defer dz.RUnlock()
 		// Get the zone
 		for _, ns := range d.Namespaces {
-			if err := d.Client.Get(context.TODO(), client.ObjectKey{
+			if err := d.K8sClient.Get(context.TODO(), client.ObjectKey{
 				Namespace: ns,
 				Name:      strings.TrimSuffix(zone, "."),
 			}, &zoneObj); err != nil {
@@ -150,7 +172,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 		// set serial
 		zoneObj.Status.Serial = soaSerial
 		// Update the zone
-		if err := d.Client.Status().Update(context.TODO(), &zoneObj); err != nil {
+		if err := d.K8sClient.Status().Update(context.TODO(), &zoneObj); err != nil {
 			log.Infof("Error updating zone object: %s", err.Error())
 			return dns.RcodeServerFailure, nil
 		}
@@ -188,7 +210,6 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 		}
 		// log message
 		log.Infof("Dynamic update for %s from %s: %s", zone, state.IP(), m.String())
-		dz.RUnlock()
 		return dns.RcodeSuccess, nil
 	}
 	z = d.Merge(zone)
