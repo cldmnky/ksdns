@@ -2,11 +2,29 @@
 
 An Operator for serving delegated zones that can be updated using rfc2136 (dynamic updates)
 
+
 ## Description
 
-`ksdns` deploys `CoreDNS` and `zupd` (a CoreDNS server with RFC2136 support) to a Kubernetes cluster.
+`ksdns` consists of two components: 
 
-Zones are created and managed using `CRDs`.
+* `zupd`which is a CoreDNS based plugin that enables RFC2136 (Dynamic Updates) DNS operations. upd` stores it's state in Kubernetes and have a controller and a *Custom Resource* which keeps state. A typical `Corefile` for the dynamic-update plugin would look like:
+
+  ```Corefile
+  example.org:1053 {
+				prometheus localhost:9253
+				tsig {
+					secret  example.org <base64 encoded key>
+					require all
+				}
+				dynamicupdate ` + zupdName + `
+				transfer {
+					to * 
+				}
+			}
+  ```
+  `zupd` requires a kubeconfig to be run in-cluster to start. `zupd`must run with leader election enabled if running more than one replica. It should also use `TSIG` for security when handling updates.
+  
+* The `ksdns-operator` that deploys and manages `zupd` deployments. A typical deployment consists of a `zupd` deployment with frontfacing CoreDNS replicas with the secondary plugin enabled.
 
 ## Use Case
 
@@ -43,18 +61,13 @@ Zones are created and managed using `CRDs`.
         ; service.blahonga.me zone
         $ORIGIN service.blahonga.me.
         @                      3600 SOA   ksdns.blahonga.me (
-                                    zone-admin.blahonga.corp.     ; address of responsible party
+                                    zone-admin.blahonga.corp.  ; address of responsible party
                                     20160727                   ; serial number, not used
                                     3600                       ; refresh period
                                     600                        ; retry period
                                     604800                     ; expire time
                                     1800                     ) ; minimum ttl
                               86400 NS    ksdns.blahonga.me.
-        mail                  14400 A     204.13.248.106
-        vpn                      60 A     216.146.45.240
-        webapp                   60 A     216.146.46.10
-        webapp                   60 A     216.146.46.11
-        service               IN    SRV   8080 10 10 @
     ```
 
 3. Deploy external-dns in a cluster and setup a RFC2136 provider using the `zupd` service.
