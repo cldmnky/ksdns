@@ -19,7 +19,7 @@ func TestMerge(t *testing.T) {
 	dynamicZone := file.NewZone(exampleOrgZone, "")
 
 	d := DynamicUpdate{
-		Zones: Zones{
+		Zones: &Zones{
 			Z: map[string]*file.Zone{
 				exampleOrgZone: zone,
 			},

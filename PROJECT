@@ -10,6 +10,7 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
+  controller: true
   domain: ksdns.io
   group: rfc1035
   kind: Zone

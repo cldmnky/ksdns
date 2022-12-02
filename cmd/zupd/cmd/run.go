@@ -263,4 +263,5 @@ var Directives = []string{
 	"on",
 	"sign",
 	"view",
+	"kubeapi",
 }

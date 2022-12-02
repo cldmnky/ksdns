@@ -3,7 +3,7 @@ package test
 import (
 	"sync"
 
-	_ "github.com/cldmnky/ksdns/pkg/zupd/core/plugin" // Load all managed plugins in github.com/coredns/coredns.
+	_ "github.com/cldmnky/ksdns/pkg/zupd/core/plugin" // Load all managed plugins.
 	"github.com/coredns/caddy"
 	_ "github.com/coredns/coredns/core" // Hook in CoreDNS.
 	"github.com/coredns/coredns/core/dnsserver"
@@ -65,6 +65,7 @@ var Directives = []string{
 	"on",
 	"sign",
 	"view",
+	"kubeapi",
 }
 
 func init() {
