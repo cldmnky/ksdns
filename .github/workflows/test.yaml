@@ -21,8 +21,6 @@ jobs:
       - uses: engineerd/setup-kind@v0.5.0
         with:
           version: "v0.17.0"
-        env:
-          KIND_EXPERIMENTAL_PROVIDER: podman
       - name: test
         run: make test
         env:
