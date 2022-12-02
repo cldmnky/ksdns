@@ -7,8 +7,8 @@ An Operator for serving delegated zones that can be updated using rfc2136 (dynam
 
 `ksdns` consists of two components: 
 
-* `zupd`which is a CoreDNS based plugin that enables RFC2136 (Dynamic Updates) DNS operations. upd` stores it's state in Kubernetes and have a controller and a *Custom Resource* which keeps state. A typical `Corefile` for the dynamic-update plugin would look like:
-
+* `zupd`which is a CoreDNS based plugin that enables RFC2136 (Dynamic Updates) DNS operations. `zupd` stores it's state in Kubernetes with a controller and a *Custom Resource* which keeps state. A typical `Corefile` for the dynamic-update plugin would look like:
+`z
   ```Corefile
   example.org:1053 {
 				prometheus localhost:9253
@@ -76,8 +76,6 @@ An Operator for serving delegated zones that can be updated using rfc2136 (dynam
 External-dns will now create records in the (internal) delegated zone for the cluster. The records should be resolvable form the internal network only.
 
 If you need a let's encrypt cert, request a cert for a record in `ksdns`. Cert-manager will setup the DNS verification in the public R53 zone and `ksdns` will make sure that the service is resolvable inside your network.
-
-zone: blahonga.me in R53, <cluster>.service.blahonga.me delegation setup in R53, pointing to the `ksdns` `CoreDNS`deployment.
 
 ## Getting Started
 
