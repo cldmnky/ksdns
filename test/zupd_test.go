@@ -139,7 +139,6 @@ var _ = Describe("zupd", func() {
 			// Corefile
 			corefile := `example.org:1053 {
 				debug
-				reload
 				prometheus localhost:9253
 				bind 127.0.0.1
 				tsig {
