@@ -29,23 +29,22 @@ var (
 var _ = Describe("zupd", func() {
 	Context("Running the binary", func() {
 		var (
-			caddyInstance *caddy.Instance
-			tcp, udp      string
-			zoneName      string = "example.org"
-			subZoneName   string = "sub.example.org"
-			zupdName      string = "test-zupd"
-			namespace     *corev1.Namespace
+			caddyInstance                           *caddy.Instance
+			tcp, udp                                string
+			zoneName                                string = "example.org"
+			subZoneName                             string = "sub.example.org"
+			zupdBaseName                            string = "test-zupd"
+			zupdName                                string
+			namespace                               *corev1.Namespace
+			typeNamespaceName, typeNamespaceSubName types.NamespacedName
 		)
 
 		ctx := context.Background()
 
-		typeNamespaceName := types.NamespacedName{Name: zoneName, Namespace: zupdName}
-		typeNamespaceSubName := types.NamespacedName{Name: subZoneName, Namespace: zupdName}
-
 		BeforeEach(func() {
 			By("Creating the Namespace to perform the tests")
 			// Create a timestamped namespace to avoid conflicts
-			zupdName = zupdName + "-" + time.Now().Format("20060102150405")
+			zupdName = fmt.Sprintf("%s-%d", zupdBaseName, time.Now().UnixMilli())
 			typeNamespaceName = types.NamespacedName{Name: zoneName, Namespace: zupdName}
 			typeNamespaceSubName = types.NamespacedName{Name: subZoneName, Namespace: zupdName}
 

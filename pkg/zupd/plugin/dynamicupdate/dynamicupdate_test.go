@@ -2,6 +2,7 @@ package dynamicupdate
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -24,7 +25,8 @@ var _ = Describe("zupd", func() {
 			//fakeTsigSecret string = "IwBTJx9wrDp4Y1RyC3H0gA=="
 			zoneName          string = "example.org"
 			d                 *DynamicUpdate
-			zupdName          string = "test-zupd"
+			zupdBaseName      string = "test-zupd"
+			zupdName          string
 			namespace         *corev1.Namespace
 			typeNamespaceName types.NamespacedName
 		)
@@ -35,7 +37,7 @@ var _ = Describe("zupd", func() {
 			Cfg = cfg
 			By("Creating the Namespace to perform the tests")
 			// Create a timestamped namespace to avoid conflicts
-			zupdName = zupdName + "-" + time.Now().Format("20060102150405")
+			zupdName = fmt.Sprintf("%s-%d", zupdBaseName, time.Now().UnixMilli())
 			typeNamespaceName = types.NamespacedName{Name: zoneName, Namespace: zupdName}
 
 			namespace = &corev1.Namespace{
