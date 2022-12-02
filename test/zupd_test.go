@@ -333,6 +333,7 @@ var _ = Describe("zupd", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				By("Getting the zone")
+				recs = []*endpoint.Endpoint{}
 				Eventually(func() error {
 					recs, err = provider.Records(context.Background())
 					if err != nil {
@@ -343,6 +344,13 @@ var _ = Describe("zupd", func() {
 					}
 					return nil
 				}, time.Second*30, time.Second*2).Should(Succeed())
+				Expect(recs).To(ContainElement(&endpoint.Endpoint{
+					DNSName:    "foo.example.org",
+					RecordType: "A",
+					Targets:    []string{"1.2.3.4"},
+					RecordTTL:  endpoint.TTL(400),
+					Labels:     map[string]string{},
+				}))
 
 				Eventually(func() error {
 					// Check if the zone is updated
