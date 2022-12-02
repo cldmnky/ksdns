@@ -17,7 +17,9 @@ func (d DynamicUpdate) Merge(origin string) *file.Zone {
 	}
 	// Lock the zones
 	z.RLock()
+	defer z.RUnlock()
 	dz.RLock()
+	defer dz.RUnlock()
 
 	// Make a copy of the base zone
 	newZone := z.Copy()
@@ -33,7 +35,5 @@ func (d DynamicUpdate) Merge(origin string) *file.Zone {
 			newZone.Insert(rr)
 		}
 	}
-	z.RUnlock()
-	dz.RUnlock()
 	return newZone
 }

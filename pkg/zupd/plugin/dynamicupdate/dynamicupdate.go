@@ -69,16 +69,12 @@ func (z *Zones) DeleteZone(name string) {
 
 // ServeDNS implements the plugin.Handler interface.
 func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	var z *file.Zone
 	state := request.Request{W: w, Req: r}
 	qname := state.Name()
 	zone := plugin.Zones(d.Zones.Names).Matches(qname)
 	if zone == "" {
 		return plugin.NextOrFailure(d.Name(), d.Next, ctx, w, r)
-	}
-
-	z, ok := d.Zones.Z[zone]
-	if !ok || z == nil {
-		return dns.RcodeServerFailure, nil
 	}
 
 	dz, ok := d.Zones.DynamicZones[zone]
@@ -92,7 +88,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 	}
 	// This is only for when we are a secondary zones. Drop the request.
 	if r.Opcode == dns.OpcodeNotify {
-		log.Infof("Dropping notify from %s for %s", state.IP(), zone)
+		log.Debugf("Dropping notify from %s for %s", state.IP(), zone)
 		return dns.RcodeSuccess, nil
 	}
 
@@ -103,7 +99,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 			zoneObj   rfc1035v1alpha1.Zone
 			soaSerial uint32 = uint32(time.Now().UnixMilli())
 		)
-		log.Infof("Handling dynamic update for %s", zone)
+		log.Debugf("Handling dynamic update for %s", zone)
 		dz.Lock()
 
 		for range r.Question {
@@ -114,7 +110,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 					rr.Header().Rrtype != dns.TypeA &&
 					rr.Header().Rrtype != dns.TypeAAAA &&
 					rr.Header().Rrtype != dns.TypeSRV {
-					log.Infof("Rejecting dynamic update for %s: %s", zone, rr.Header().String())
+					log.Debugf("Rejecting dynamic update for %s: %s", zone, rr.Header().String())
 					dz.Unlock()
 					return dns.RcodeRefused, nil
 				}
@@ -123,9 +119,9 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 				if _, ok := dns.IsDomainName(h.Name); ok {
 					switch updateType(h) {
 					case "insert":
-						log.Infof("Inserting %s", rr.String())
+						log.Debugf("Inserting %s", rr.String())
 						if err := dz.Insert(rr); err != nil {
-							log.Infof("Error inserting %s: %s", rr.String(), err.Error())
+							log.Errorf("Error inserting %s: %s", rr.String(), err.Error())
 							dz.Unlock()
 							return dns.RcodeServerFailure, nil
 						}
@@ -157,7 +153,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 			break
 		}
 		if !found {
-			log.Infof("Rejecting dynamic update for %s, object not found", zone)
+			log.Debugf("Rejecting dynamic update for %s, object not found", zone)
 			return dns.RcodeRefused, nil
 		}
 		// Update the zone
@@ -173,7 +169,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 		zoneObj.Status.Serial = soaSerial
 		// Update the zone
 		if err := d.K8sClient.Status().Update(context.TODO(), &zoneObj); err != nil {
-			log.Infof("Error updating zone object: %s", err.Error())
+			log.Errorf("Error updating zone object: %s", err.Error())
 			return dns.RcodeServerFailure, nil
 		}
 		z = d.Merge(zone)
@@ -191,7 +187,7 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 					log.Errorf("Failed to update SOA record: %s", err)
 					return dns.RcodeServerFailure, nil
 				}
-				log.Infof("Updated SOA serial to %d", soa.Serial)
+				log.Debugf("Updated SOA serial to %d", soa.Serial)
 			}
 		}
 
@@ -205,11 +201,11 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 		m.SetReply(r)
 		m.Authoritative = true
 		if err := w.WriteMsg(m); err != nil {
-			log.Infof("Error writing response: %s", err.Error())
+			log.Errorf("Error writing response: %s", err.Error())
 			return dns.RcodeServerFailure, nil
 		}
 		// log message
-		log.Infof("Dynamic update for %s from %s: %s", zone, state.IP(), m.String())
+		log.Debugf("Dynamic update for %s from %s: %s", zone, state.IP(), m.String())
 		return dns.RcodeSuccess, nil
 	}
 	z = d.Merge(zone)
@@ -220,7 +216,6 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 		log.Errorf("Zone %s is expired", zone)
 		return dns.RcodeServerFailure, nil
 	}
-
 	answer, ns, extra, result := z.Lookup(ctx, state, qname)
 	m := new(dns.Msg)
 	m.SetReply(r)

@@ -30,15 +30,24 @@ func init() {
 
 func setup(c *caddy.Controller) error {
 	d := DynamicUpdate{}
-	if err := d.NewManager(Cfg); err != nil {
-		return plugin.Error("dynamicupdate", err)
-	}
 
-	client, err := client.New(Cfg, client.Options{})
+	client, err := client.New(Cfg, client.Options{
+		Scheme: scheme,
+	})
 	if err != nil {
 		return plugin.Error("dynamicupdate", err)
 	}
 	d.K8sClient = client
+
+	zones, err := d.initialize(c)
+	if err != nil {
+		return plugin.Error("dynamicupdate", err)
+	}
+	d.Zones = &zones
+
+	if err := d.NewManager(Cfg); err != nil {
+		return plugin.Error("dynamicupdate", err)
+	}
 
 	ctx, stopManager := context.WithCancel(context.Background())
 
@@ -79,12 +88,6 @@ func setup(c *caddy.Controller) error {
 		d.OnShutdown()
 		return nil
 	})
-
-	zones, err := d.initialize(c)
-	if err != nil {
-		return plugin.Error("dynamicupdate", err)
-	}
-	d.Zones = &zones
 
 	c.OnStartup(func() error {
 		go func() {
@@ -143,7 +146,7 @@ func (d *DynamicUpdate) initialize(c *caddy.Controller) (Zones, error) {
 		for ok := c.NextArg(); ok; ok = c.NextArg() {
 			d.Namespaces = append(d.Namespaces, c.Val())
 		}
-		log.Infof("Namespaces: %v", d.Namespaces)
+		log.Debugf("Namespaces: %v", d.Namespaces)
 	}
 
 	for _, n := range d.Namespaces {
@@ -151,6 +154,7 @@ func (d *DynamicUpdate) initialize(c *caddy.Controller) (Zones, error) {
 		// TODO check if namespace exists or is *
 		zones := &rfc1035v1alpha1.ZoneList{}
 		if err := d.K8sClient.List(context.Background(), zones, client.InNamespace(n)); err != nil {
+			log.Errorf("Failed to list zones: %v", err)
 			return Zones{}, err
 		}
 		for _, zone := range zones.Items {

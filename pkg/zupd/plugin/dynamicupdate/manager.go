@@ -1,9 +1,11 @@
 package dynamicupdate
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	rfc1035v1alpha1 "github.com/cldmnky/ksdns/pkg/zupd/api/v1alpha1"
+	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -13,8 +15,10 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = log
+	scheme                  = runtime.NewScheme()
+	setupLog                = log
+	enableLeaderElection    bool
+	leaderElectionNamespace string
 )
 
 func init() {
@@ -24,14 +28,29 @@ func init() {
 }
 
 func (d *DynamicUpdate) NewManager(cfg *rest.Config) error {
+	v := viper.GetViper()
+	election := v.Get("enable-leader-election")
+	if election == nil {
+		enableLeaderElection = false
+	} else {
+		enableLeaderElection = election.(bool)
+	}
+	electionNamespace := v.Get("leader-election-namespace")
+	if electionNamespace == nil {
+		leaderElectionNamespace = ""
+	} else {
+		leaderElectionNamespace = electionNamespace.(string)
+	}
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                  scheme,
+		NewCache:                cache.MultiNamespacedCacheBuilder(d.Namespaces),
 		MetricsBindAddress:      "0",
 		Port:                    0,
 		HealthProbeBindAddress:  "0",
-		LeaderElection:          false,
+		LeaderElection:          enableLeaderElection,
 		LeaderElectionID:        "3deb8c7a.ksdns.io",
-		LeaderElectionNamespace: "ksdns-system",
+		LeaderElectionNamespace: leaderElectionNamespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to setup manager")
@@ -53,5 +72,6 @@ func (d *DynamicUpdate) NewManager(cfg *rest.Config) error {
 		return err
 	}
 	d.mgr = mgr
+
 	return nil
 }
