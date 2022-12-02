@@ -1,6 +1,7 @@
 domain: ksdns.io
 layout:
 - go.kubebuilder.io/v4-alpha
+multigroup: true
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
@@ -15,5 +16,14 @@ resources:
   group: rfc1035
   kind: Zone
   path: github.com/cldmnky/ksdns/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: ksdns.io
+  group: dns
+  kind: Ksdns
+  path: github.com/cldmnky/ksdns/apis/dns/v1alpha1
   version: v1alpha1
 version: "3"

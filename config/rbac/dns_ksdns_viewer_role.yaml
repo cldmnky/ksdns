@@ -1,0 +1,27 @@
+# permissions for end users to view ksdns.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: ksdns-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: ksdns
+    app.kubernetes.io/part-of: ksdns
+    app.kubernetes.io/managed-by: kustomize
+  name: ksdns-viewer-role
+rules:
+- apiGroups:
+  - dns.ksdns.io
+  resources:
+  - ksdns
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dns.ksdns.io
+  resources:
+  - ksdns/status
+  verbs:
+  - get

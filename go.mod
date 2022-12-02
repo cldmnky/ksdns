@@ -5,7 +5,6 @@ go 1.19
 replace github.com/coredns/coredns => github.com/cldmnky/coredns v0.0.0-20221123124926-208a1c0122eb
 
 require (
-	github.com/bodgit/tsig v1.0.1
 	github.com/coredns/caddy v1.1.1
 	github.com/coredns/kubeapi v0.0.0-20220204142012-e4e9337f0a0d
 	github.com/onsi/ginkgo/v2 v2.1.6
@@ -31,6 +30,7 @@ require (
 	github.com/antonmedv/expr v1.9.0 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.142 // indirect
+	github.com/bodgit/tsig v1.0.1 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
@@ -102,7 +102,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.5 // indirect

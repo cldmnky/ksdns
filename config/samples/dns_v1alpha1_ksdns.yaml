@@ -1,0 +1,12 @@
+apiVersion: dns.ksdns.io/v1alpha1
+kind: Ksdns
+metadata:
+  labels:
+    app.kubernetes.io/name: ksdns
+    app.kubernetes.io/instance: ksdns-sample
+    app.kubernetes.io/part-of: ksdns
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ksdns
+  name: ksdns-sample
+spec:
+  # TODO(user): Add fields here

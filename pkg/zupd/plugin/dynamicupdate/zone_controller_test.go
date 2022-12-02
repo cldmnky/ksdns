@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	rfc1035v1alpha1 "github.com/cldmnky/ksdns/api/v1alpha1"
+	rfc1035v1alpha1 "github.com/cldmnky/ksdns/pkg/zupd/api/v1alpha1"
 	"github.com/miekg/dns"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

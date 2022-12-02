@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	rfc1035v1alpha1 "github.com/cldmnky/ksdns/api/v1alpha1"
+	rfc1035v1alpha1 "github.com/cldmnky/ksdns/pkg/zupd/api/v1alpha1"
 	"github.com/cldmnky/ksdns/pkg/zupd/plugin/dynamicupdate"
 	"github.com/coredns/caddy"
 	"github.com/miekg/dns"

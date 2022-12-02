@@ -1,4 +1,5 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
 - rfc1035_v1alpha1_zone.yaml
+- dns_v1alpha1_ksdns.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
