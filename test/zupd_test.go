@@ -208,16 +208,17 @@ var _ = Describe("zupd", func() {
 					return k8sClient.Get(ctx, types.NamespacedName{Name: "new.example.org", Namespace: zupdName}, found)
 				}, time.Minute, time.Second).Should(Succeed())
 				By("Querying the new zone")
+				var resp *dns.Msg
 				Eventually(func() error {
-					zone, err := dnsQuery(udp, "foo.new.example.org.", dns.TypeA)
+					resp, err = dnsQuery(udp, "foo.new.example.org.", dns.TypeA)
 					if err != nil {
 						return err
 					}
-					if len(zone.Answer) != 1 {
-						return fmt.Errorf("expected 1 answers, got %d", len(zone.Answer))
+					if len(resp.Answer) != 1 {
+						return fmt.Errorf("expected 1 answers, got %d", len(resp.Answer))
 					}
 					return nil
-				}, time.Second*6, time.Second*2).Should(Succeed())
+				}, time.Second*20, time.Second*2).Should(Succeed())
 
 				By("Updating the zone")
 				updatedZone := &rfc1035v1alpha1.Zone{}

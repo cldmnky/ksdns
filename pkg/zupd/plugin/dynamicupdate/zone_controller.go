@@ -85,7 +85,7 @@ func (r *DynamicUpdate) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	} else {
 		// Update the zone if it has changed, compare old and new object
-		//log.Debugf("Zone %s has changed", zone.Name)
+		log.Debugf("Zone %s has changed", zone.Name)
 		parsedZone, err := file.Parse(strings.NewReader(zone.Spec.Zone), dns.Fqdn(zone.Name), "stdin", 0)
 		if err != nil {
 			log.Errorf("Failed to parse zone %s: %v", zone.Name, err)
