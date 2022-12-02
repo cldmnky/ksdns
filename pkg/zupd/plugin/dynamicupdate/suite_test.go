@@ -50,11 +50,11 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")
+	useExistingCluster := true
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("../../../../", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
-		// TODO fix this
-		BinaryAssetsDirectory: filepath.Join("../../../../", "bin", "k8s", "1.25.0-darwin-arm64"),
+		UseExistingCluster:    &useExistingCluster,
 	}
 
 	var err error
