@@ -332,9 +332,18 @@ var _ = Describe("zupd", func() {
 				err = provider.ApplyChanges(context.Background(), p)
 				Expect(err).ToNot(HaveOccurred())
 
-				recs, err = provider.Records(context.Background())
-				Expect(err).ToNot(HaveOccurred())
-				Expect(recs).To(HaveLen(8))
+				By("Getting the zone")
+				Eventually(func() error {
+					recs, err = provider.Records(context.Background())
+					if err != nil {
+						Expect(err).ToNot(HaveOccurred())
+					}
+					if len(recs) != 8 {
+						return fmt.Errorf("expected 8 records, got %d", len(recs))
+					}
+					return nil
+				}, time.Second*30, time.Second*2).Should(Succeed())
+
 				Eventually(func() error {
 					// Check if the zone is updated
 					By("Checking if the zone is updated")
