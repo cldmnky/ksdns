@@ -238,7 +238,7 @@ var _ = Describe("zupd", func() {
 						return fmt.Errorf("expected 1 answers, got %d", len(zone.Answer))
 					}
 					return nil
-				}, time.Second*6, time.Second*2).Should(Succeed())
+				}, time.Second*30, time.Second*2).Should(Succeed())
 
 				By("Deleting the zone")
 				// get the zone again
