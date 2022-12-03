@@ -22,7 +22,7 @@ import (
 
 // Types
 type (
-	// DynamicUpdate is a plugin that implements the file backend.
+	// DynamicUpdate is a plugin that implements RFC2136.
 	DynamicUpdate struct {
 		// Next plugin in the chain.
 		Next plugin.Handler

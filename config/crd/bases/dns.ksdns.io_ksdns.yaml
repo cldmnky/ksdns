@@ -35,10 +35,47 @@ spec:
           spec:
             description: KsdnsSpec defines the desired state of Ksdns
             properties:
-              foo:
-                description: Foo is an example field of Ksdns. Edit ksdns_types.go
-                  to remove/update
-                type: string
+              zones:
+                items:
+                  properties:
+                    origin:
+                      type: string
+                    records:
+                      items:
+                        properties:
+                          data:
+                            type: string
+                          name:
+                            type: string
+                          port:
+                            description: required if SRV
+                            type: integer
+                          priority:
+                            description: required if SRV
+                            type: integer
+                          text:
+                            description: Required if TXT
+                            type: string
+                          ttl:
+                            default: 30
+                            description: optional default is 30
+                            maximum: 2147483647
+                            minimum: 0
+                            type: integer
+                          type:
+                            enum:
+                            - A
+                            - CNAME
+                            - SRV
+                            - TXT
+                            type: string
+                          weight:
+                            description: required if SRV
+                            type: integer
+                        type: object
+                      type: array
+                  type: object
+                type: array
             type: object
           status:
             description: KsdnsStatus defines the observed state of Ksdns

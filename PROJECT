@@ -11,11 +11,11 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
-  controller: true
+  controller: false
   domain: ksdns.io
   group: rfc1035
   kind: Zone
-  path: github.com/cldmnky/ksdns/api/v1alpha1
+  path: github.com/cldmnky/ksdns/pkg/zupd/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
