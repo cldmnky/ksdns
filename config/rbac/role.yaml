@@ -6,9 +6,9 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - rfc1035.ksdns.io
+  - dns.ksdns.io
   resources:
-  - zones
+  - ksdns
   verbs:
   - create
   - delete
@@ -18,15 +18,15 @@ rules:
   - update
   - watch
 - apiGroups:
-  - rfc1035.ksdns.io
+  - dns.ksdns.io
   resources:
-  - zones/finalizers
+  - ksdns/finalizers
   verbs:
   - update
 - apiGroups:
-  - rfc1035.ksdns.io
+  - dns.ksdns.io
   resources:
-  - zones/status
+  - ksdns/status
   verbs:
   - get
   - patch

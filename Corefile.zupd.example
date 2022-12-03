@@ -1,16 +1,16 @@
-example.org:1053 {
+example.org:1053 sub.example.org:1053 {
 		debug
-        kubeapi
+		log
+		ready
 		bind 127.0.0.1
-		dynamicupdate example.com {
-			reload 5s
-		}
+		prometheus :8080
+		dynamicupdate test-zupd-1670010624270
 		transfer {
 			to * 
 			to 192.168.1.1
 		}
 		tsig {
-			secret foo YmFyCg==
+			secret foo IwBTJx9wrDp4Y1RyC3H0gA==
 			require all
 		}
 }

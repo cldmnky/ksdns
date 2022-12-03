@@ -14,6 +14,7 @@ import (
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	_ "github.com/cldmnky/ksdns/pkg/zupd/core/plugin" // Plug in CoreDNS.
 )
@@ -24,15 +25,22 @@ const (
 	serverType  = "dns"
 )
 
+// Flags that control program flow or startup
+var (
+	conf                    string
+	version                 bool
+	plugins                 bool
+	enableLeaderElection    bool
+	leaderElectionNamespace string
+)
+
 // runCmd represents the run command
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the zupd CoreDNS server",
 	Long:  `Run the zupd CoreDNS server`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// run CoreDNS
 		Run()
-
 	},
 }
 
@@ -52,7 +60,13 @@ func init() {
 	// version
 	runCmd.Flags().BoolVarP(&version, "version", "", false, "Show version")
 	// quiet
-	runCmd.Flags().BoolVarP(&dnsserver.Quiet, "quiet", "", false, "Quiet mode (no initialization output)")
+	runCmd.Flags().BoolVarP(&dnsserver.Quiet, "quiet", "", true, "Quiet mode (no initialization output)")
+	// Leader election
+	runCmd.Flags().BoolVarP(&enableLeaderElection, "enable-leader-election", "", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	viper.BindPFlag("enable-leader-election", runCmd.Flags().Lookup("enable-leader-election"))
+	// Leader election namespace
+	runCmd.Flags().StringVarP(&leaderElectionNamespace, "leader-election-namespace", "", "default", "Namespace where the leader election resource exists. Defaults to the default namespace if not set.")
+	viper.BindPFlag("leader-election-namespace", runCmd.Flags().Lookup("leader-election-namespace"))
 
 	caddy.RegisterCaddyfileLoader("flag", caddy.LoaderFunc(confLoader))
 	caddy.SetDefaultCaddyfileLoader("default", caddy.LoaderFunc(defaultLoader))
@@ -185,13 +199,6 @@ func setVersion() {
 		}
 	}
 }
-
-// Flags that control program flow or startup
-var (
-	conf    string
-	version bool
-	plugins bool
-)
 
 // Build information obtained with the help of -ldflags
 var (
