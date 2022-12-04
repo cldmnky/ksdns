@@ -24,6 +24,7 @@ import (
 
 // ZoneSpec defines the desired state of Zone
 type ZoneSpec struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Zone string `json:"zone,omitempty"`
 }
 
@@ -33,6 +34,7 @@ func (zs *ZoneSpec) GetZone() string {
 
 // ZoneStatus defines the observed state of Zone
 type ZoneStatus struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	DynamicRRs []DynamicRR `json:"dynamicRRs,omitempty"`
 	Serial     uint32      `json:"serial,omitempty"`
 }

@@ -32,13 +32,13 @@ var _ = Describe("ksdns types", func() {
 	Describe("newNSRecord", func() {
 		Context("when the zone is empty", func() {
 			It("should error", func() {
-				_, _, err := NewNSRecord("", net.ParseIP("192.168.1.1"))
+				_, _, err := newNSRecord("", net.ParseIP("192.168.1.1"))
 				Expect(err).To(HaveOccurred())
 			})
 		})
 		Context("when the zone is not empty", func() {
 			It("should return a NS", func() {
-				ns, extra, err := NewNSRecord("example.org", net.ParseIP("192.168.1.1"))
+				ns, extra, err := newNSRecord("example.org", net.ParseIP("192.168.1.1"))
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(ns).To(Not(BeNil()))
 				Expect(ns[0].Header().Name).To(Equal("example.org."))
