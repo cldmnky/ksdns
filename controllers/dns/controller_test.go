@@ -91,7 +91,7 @@ var _ = Describe("ksdns controller", func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			By("Reconciling the custom resource created")
-			ksdnsReconciler := &KsdnsReconciler{
+			ksdnsReconciler := &Reconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
@@ -144,7 +144,7 @@ var _ = Describe("ksdns controller", func() {
 		})
 		Describe("newCaddyFile", func() {
 			It("should generate a caddyfile", func() {
-				ksdnsReconciler := &KsdnsReconciler{
+				ksdnsReconciler := &Reconciler{
 					Client: k8sClient,
 					Scheme: k8sClient.Scheme(),
 				}

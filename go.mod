@@ -2,7 +2,7 @@ module github.com/cldmnky/ksdns
 
 go 1.19
 
-replace github.com/coredns/coredns => github.com/cldmnky/coredns v0.0.0-20221123124926-208a1c0122eb
+replace github.com/coredns/coredns => github.com/cldmnky/coredns v0.0.0-20221204202708-24d843358542
 
 require (
 	github.com/coredns/caddy v1.1.1

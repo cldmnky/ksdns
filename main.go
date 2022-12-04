@@ -91,7 +91,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&dnscontrollers.KsdnsReconciler{
+	if err = (&dnscontrollers.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
