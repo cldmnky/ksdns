@@ -122,12 +122,16 @@ func (r *Reconciler) ensureCoreDNSConfigMap(ctx context.Context, ksdns *dnsv1alp
 		return err
 	}
 	// create or update the corefile
-	CreateOrUpdateWithRetries(ctx, r.Client, coreFile, func() error {
+	op, err := CreateOrUpdateWithRetries(ctx, r.Client, coreFile, func() error {
 		coreFile.Data = map[string]string{
 			"Corefile": corefile,
 		}
 		return ctrl.SetControllerReference(ksdns, coreFile, r.Scheme)
 	})
+	if err != nil {
+		return err
+	}
+	log.Info("coredns", "configmap", corednsName(ksdns), "op", op)
 
 	return nil
 }
@@ -342,6 +346,10 @@ func renderCoreFileTsigSecret(key, secret string) (string, error) {
 
 func generateTsigSecret() string {
 	key := make([]byte, 32)
-	rand.Read(key)
+	_, err := rand.Read(key)
+	if err != nil {
+		// panic
+		panic(err)
+	}
 	return base64.StdEncoding.EncodeToString(key)
 }

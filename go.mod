@@ -32,7 +32,7 @@ require (
 	github.com/antonmedv/expr v1.9.0 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.142 // indirect
-	github.com/bodgit/tsig v1.0.1 // indirect
+	github.com/bodgit/tsig v1.2.0 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
@@ -41,7 +41,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/farsightsec/golang-framestream v0.3.0 // indirect
 	github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
+	github.com/golang/glog v1.0.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
@@ -54,13 +54,13 @@ require (
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
 	github.com/jcmturner/gofork v1.7.6 // indirect
 	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
-	github.com/jcmturner/gokrb5 v8.4.3+incompatible // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.3 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
+	github.com/jinzhu/copier v0.3.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/mitchellh/copystructure v1.0.0 // indirect
+	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/reflectwalk v1.0.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/openshift/gssapi v0.0.0-20161010215902-5fb4217df13b // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
@@ -171,7 +171,7 @@ require (
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
-	sigs.k8s.io/external-dns v0.11.0
+	sigs.k8s.io/external-dns v0.13.1
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect

@@ -25,14 +25,18 @@ func (d DynamicUpdate) Merge(origin string) *file.Zone {
 	newZone := z.Copy()
 	for _, e := range z.All() {
 		for _, rr := range e.All() {
-			newZone.Insert(rr)
+			if err := newZone.Insert(rr); err != nil {
+				log.Errorf("Failed to insert RR %s: %s", rr, err)
+			}
 		}
 	}
 
 	// Merge the dynamic zone with the static zone.
 	for _, te := range dz.All() {
 		for _, rr := range te.All() {
-			newZone.Insert(rr)
+			if err := newZone.Insert(rr); err != nil {
+				log.Errorf("Failed to insert RR %s: %s", rr, err)
+			}
 		}
 	}
 	return newZone

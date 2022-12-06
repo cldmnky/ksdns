@@ -63,7 +63,9 @@ func (zs *ZoneStatus) GetDynamicRRsAsZone(name string) *file.Zone {
 		if rr, err := dns.NewRR(rrString.RR); err != nil {
 			continue
 		} else {
-			zone.Insert(rr)
+			if err := zone.Insert(rr); err != nil {
+				continue
+			}
 		}
 	}
 	if len(zone.All()) == 0 {
