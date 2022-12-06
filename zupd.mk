@@ -15,3 +15,14 @@ docker-buildx-zupd: ## Build and push docker image for the zupd for cross-platfo
 	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG_ZUPD} -f Dockerfile.zupd.cross .
 	- docker buildx rm project-v3-builder
 	rm Dockerfile.zupd.cross
+
+.PHONY: multiarch-image-zupd
+multiarch-image-zupd:
+	docker buildx build \
+		-t ${IMG} \
+		--progress plain \
+		--pull \
+		--platform ${RELEASE_IMAGE_PLATFORMS} \
+		--push
+		-f Dockerfile.zupd
+		.

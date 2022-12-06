@@ -30,7 +30,7 @@ jobs:
         with:
           version: "v0.17.0"
       - name: build and push images (latest)
-        run: make docker-buildx && make docker-buildx-zupd
+        run: make multiarch-image-manager && make multiarch-image-zupd
       - name: test
         run: make test
         env:

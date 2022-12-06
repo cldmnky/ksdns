@@ -66,6 +66,11 @@ CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+# Set some helpers for multi arch builds
+OS?=$(shell go env GOOS)
+ARCH?=$(shell go env GOARCH)
+RELEASE_IMAGE_PLATFORMS?=linux/amd64,linux/arm64
+
 .PHONY: all
 all: build
 
@@ -145,6 +150,18 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.manager.cross .
 	- docker buildx rm project-v3-builder
 	rm Dockerfile.manager.cross
+
+# multi-arch
+.PHONY: multiarch-image-manager
+multiarch-image-manager:
+	docker buildx build \
+		-t ${IMG} \
+		--progress plain \
+		--pull \
+		--platform ${RELEASE_IMAGE_PLATFORMS} \
+		--push
+		-f Dockerfile.manager
+		.
 
 ##@ Deployment
 
