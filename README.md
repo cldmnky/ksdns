@@ -2,25 +2,43 @@
 
 An Operator for serving delegated zones that can be updated using rfc2136 (dynamic updates)
 
+`ksdns` makes it easy to serve short(er) domain names from clusters in an easy way.
+
+Just setup a root zone in a name server. This may be a public domain or a private domain.
+
+For a public R53 zone named `example.org`:
+
+  1. Deploy ksdns, setup a zone named `prod.example.org`
+  2. Create an NS record and a glue record for the delegated service domain. The glue record should point to the IP exposed by the ksdns deployment.
+  3. Point `external-dns`'s RFC2136 provider to the `zupd` external IP.
+  4. Use `external-dns` to expose nice domain names for services/ingresses/routes such as www.prod.example.org
+  5. If the delegation is done in provider supported by `Cert Manager` and the zone is public, then cert-manager will be provision valid Let's encrypt cert for internal services. No need for pre-created certs using an internal CA!
+
+
 
 ## Description
 
 `ksdns` consists of two components: 
 
 * `zupd`which is a CoreDNS based plugin that enables RFC2136 (Dynamic Updates) DNS operations. `zupd` stores it's state in Kubernetes with a controller and a *Custom Resource* which keeps state. A typical `Corefile` for the dynamic-update plugin would look like:
-`z
-  ```Corefile
-  example.org:1053 {
-				prometheus localhost:9253
-				tsig {
-					secret  example.org <base64 encoded key>
-					require all
-				}
-				dynamicupdate ` + zupdName + `
-				transfer {
-					to * 
-				}
-			}
+
+```Corefile
+example.org:1053 sub.example.org:1053 {
+  debug
+  log
+  ready
+  bind 127.0.0.1
+  prometheus :8080
+  dynamicupdate test-zupd-1670010624270
+  transfer {
+    to * 
+    to 192.168.1.1
+  }
+  tsig {
+    secret foo IwBTJx9wrDp4Y1RyC3H0gA==
+    require all
+  }
+}
   ```
   `zupd` requires a kubeconfig to be run in-cluster to start. `zupd`must run with leader election enabled if running more than one replica. It should also use `TSIG` for security when handling updates.
   

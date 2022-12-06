@@ -154,6 +154,7 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 # multi-arch
 .PHONY: multiarch-image-manager
 multiarch-image-manager:
+    docker buildx create --name project-v3-builder
 	docker buildx build \
 		-t ${IMG} \
 		--progress plain \
@@ -162,6 +163,7 @@ multiarch-image-manager:
 		--push \
 		-f Dockerfile.manager \
 		.
+	docker buildx rm project-v3-builder
 
 ##@ Deployment
 
