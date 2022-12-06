@@ -314,17 +314,11 @@ var _ = Describe("zupd", func() {
 							RecordType: "TXT",
 							Targets:    []string{"boom"},
 						},
-					},
-					Delete: []*endpoint.Endpoint{
 						{
-							DNSName:    "vpn.example.org",
+							DNSName:    "bar.example.org",
 							RecordType: "A",
-							Targets:    []string{"216.146.45.240"},
-						},
-						{
-							DNSName:    "vpn.example.org",
-							RecordType: "TXT",
-							Targets:    []string{"boom2"},
+							Targets:    []string{"4.3.2.1"},
+							RecordTTL:  endpoint.TTL(400),
 						},
 					},
 				}
@@ -339,11 +333,13 @@ var _ = Describe("zupd", func() {
 					if err != nil {
 						Expect(err).ToNot(HaveOccurred())
 					}
-					if len(recs) != 9 {
-						return fmt.Errorf("expected 9 records, got %d", len(recs))
+					if len(recs) != 10 {
+						return fmt.Errorf("expected 10 records, got %d", len(recs))
 					}
 					return nil
 				}, time.Second*30, time.Second*2).Should(Succeed())
+
+				By("Checking the records, foo and bar should be present")
 				Expect(recs).To(ContainElement(&endpoint.Endpoint{
 					DNSName:    "foo.example.org",
 					RecordType: "A",
@@ -351,20 +347,51 @@ var _ = Describe("zupd", func() {
 					RecordTTL:  endpoint.TTL(400),
 					Labels:     map[string]string{},
 				}))
-				Expect(recs).NotTo(ContainElement(&endpoint.Endpoint{
-					DNSName:    "vpn.example.org",
+				Expect(recs).To(ContainElement(&endpoint.Endpoint{
+					DNSName:    "bar.example.org",
 					RecordType: "A",
-					Targets:    []string{"216.146.45.240"},
-					RecordTTL:  endpoint.TTL(60),
+					Targets:    []string{"4.3.2.1"},
+					RecordTTL:  endpoint.TTL(400),
 					Labels:     map[string]string{},
 				}))
-			})
 
+				By("Deleting bar.example.org")
+				p = &plan.Changes{
+					Delete: []*endpoint.Endpoint{
+						{
+							DNSName:    "bar.example.org",
+							RecordType: "A",
+							Targets:    []string{"4.3.2.1"},
+						},
+					},
+				}
+				err = provider.ApplyChanges(context.Background(), p)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Getting the zone again")
+				recs = []*endpoint.Endpoint{}
 				Eventually(func() error {
-					// Check if the zone is updated
-					By("Checking if the zone is updated")
+					recs, err = provider.Records(context.Background())
+					if err != nil {
+						Expect(err).ToNot(HaveOccurred())
+					}
+					if len(recs) != 9 {
+						return fmt.Errorf("expected 10 records, got %d", len(recs))
+					}
+					return nil
+				}, time.Second*30, time.Second*2).Should(Succeed())
+
+				By("Checking the records, bar should be gone")
+				Expect(recs).NotTo(ContainElement(&endpoint.Endpoint{
+					DNSName:    "bar.example.org",
+					RecordType: "A",
+					Targets:    []string{"boom"},
+				}))
+
+				By("Checking if the zone is updated")
+				Eventually(func() error {
 					found := &rfc1035v1alpha1.Zone{}
-					err = k8sClient.Get(ctx, typeNamespaceName, found)
+					err := k8sClient.Get(ctx, typeNamespaceName, found)
 					if err != nil {
 						return err
 					}
