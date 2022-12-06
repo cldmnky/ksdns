@@ -357,9 +357,8 @@ var _ = Describe("ksdns controller", func() {
 				)
 				return zupdDeployment.Status.UpdatedReplicas, err
 			}, time.Minute, time.Second).Should(Equal(int32(2)))
-			Expect(zupdDeployment.Status.ReadyReplicas).To(Equal(int32(1)))
+
 			Eventually(func() (int32, error) {
-				zupdDeployment := &appsv1.Deployment{}
 				err := k8sClient.Get(ctx,
 					types.NamespacedName{
 						Name:      fmt.Sprintf("%s-zupd", ksdns.Name),

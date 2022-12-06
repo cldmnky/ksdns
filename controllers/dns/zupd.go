@@ -187,6 +187,7 @@ func (r *Reconciler) ensureZupdSvc(ctx context.Context, ksdns *dnsv1alpha1.Ksdns
 }
 
 func (r *Reconciler) ensureZupdConfigMap(ctx context.Context, ksdns *dnsv1alpha1.Ksdns) error {
+	log := log.FromContext(ctx)
 	labels := makeLabels("zupd", ksdns)
 	coreFile := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -202,10 +203,14 @@ func (r *Reconciler) ensureZupdConfigMap(ctx context.Context, ksdns *dnsv1alpha1
 	}
 	transferTo := []string{}
 	for _, pod := range coreDNSPods.Items {
-		transferTo = append(transferTo, pod.Status.PodIP)
+		if pod.Status.PodIP != "" {
+			transferTo = append(transferTo, pod.Status.PodIP)
+			log.Info("found coredns pod", "pod", pod.Name, "ip", pod.Status.PodIP)
+		}
 	}
 	if len(transferTo) == 0 {
-		transferTo = append(transferTo, "10.10.10.10")
+		transferTo = append(transferTo, "169.254.0.1")
+		log.Info("no coredns pods found, using default", "ip", "169.254.0.1")
 	}
 	// Get all zones in the current namespace
 	rfc1035v1alpha1Zones := &rfc1035v1alpha1.ZoneList{}
