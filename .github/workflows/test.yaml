@@ -22,7 +22,7 @@ jobs:
         with:
           version: "v0.17.0"
       - name: test
-        run: make test
+        run: make manifests && make install && make test
         env:
           USE_EXISTING_CLUSTER: "true"
       
