@@ -299,7 +299,7 @@ var _ = Describe("zupd", func() {
 				Expect(err).ToNot(HaveOccurred())
 				recs, err := provider.Records(context.Background())
 				Expect(err).ToNot(HaveOccurred())
-				Expect(recs).To(HaveLen(6))
+				Expect(recs).To(HaveLen(7))
 
 				p := &plan.Changes{
 					Create: []*endpoint.Endpoint{
@@ -339,8 +339,8 @@ var _ = Describe("zupd", func() {
 					if err != nil {
 						Expect(err).ToNot(HaveOccurred())
 					}
-					if len(recs) != 8 {
-						return fmt.Errorf("expected 8 records, got %d", len(recs))
+					if len(recs) != 9 {
+						return fmt.Errorf("expected 9 records, got %d", len(recs))
 					}
 					return nil
 				}, time.Second*30, time.Second*2).Should(Succeed())
@@ -351,6 +351,14 @@ var _ = Describe("zupd", func() {
 					RecordTTL:  endpoint.TTL(400),
 					Labels:     map[string]string{},
 				}))
+				Expect(recs).NotTo(ContainElement(&endpoint.Endpoint{
+					DNSName:    "vpn.example.org",
+					RecordType: "A",
+					Targets:    []string{"216.146.45.240"},
+					RecordTTL:  endpoint.TTL(60),
+					Labels:     map[string]string{},
+				}))
+			})
 
 				Eventually(func() error {
 					// Check if the zone is updated
