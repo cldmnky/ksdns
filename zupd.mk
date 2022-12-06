@@ -10,8 +10,8 @@ docker-build-zupd:  ## Build docker image with zupd.
 docker-buildx-zupd: ## Build and push docker image for the zupd for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile.zupd.cross > Dockerfile.zupd.cross
-	-   buildx create --name project-v3-builder
+	- docker buildx create --name project-v3-builder
 	docker buildx use project-v3-builder
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG_ZUPD} -f Dockerfile.zupd.cross
+	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG_ZUPD} -f Dockerfile.zupd.cross .
 	- docker buildx rm project-v3-builder
 	rm Dockerfile.zupd.cross
