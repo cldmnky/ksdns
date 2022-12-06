@@ -159,8 +159,8 @@ multiarch-image-manager:
 		--progress plain \
 		--pull \
 		--platform ${RELEASE_IMAGE_PLATFORMS} \
-		--push
-		-f Dockerfile.manager
+		--push \
+		-f Dockerfile.manager \
 		.
 
 ##@ Deployment

@@ -23,6 +23,6 @@ multiarch-image-zupd:
 		--progress plain \
 		--pull \
 		--platform ${RELEASE_IMAGE_PLATFORMS} \
-		--push
-		-f Dockerfile.zupd
+		--push \
+		-f Dockerfile.zupd \
 		.
