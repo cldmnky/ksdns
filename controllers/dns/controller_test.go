@@ -366,7 +366,7 @@ var _ = Describe("ksdns controller", func() {
 					zupdDeployment,
 				)
 				return zupdDeployment.Status.ReadyReplicas, err
-			}).Should(Equal(int32(1)))
+			}, time.Minute, time.Second).Should(Equal(int32(1)))
 		})
 	})
 	Context("unit tests", func() {
