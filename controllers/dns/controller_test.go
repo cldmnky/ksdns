@@ -345,7 +345,19 @@ var _ = Describe("ksdns controller", func() {
 				return coreDNSDeployment.Status.ReadyReplicas, err
 			}, time.Minute, time.Second).Should(Equal(int32(2)))
 
-			By("Checking that the zupd deployment have 2 pods running")
+			By("Checking that the zupd deployment have 2 updated replicas")
+			zupdDeployment := &appsv1.Deployment{}
+			Eventually(func() (int32, error) {
+				zupdDeployment := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx,
+					types.NamespacedName{
+						Name:      fmt.Sprintf("%s-zupd", ksdns.Name),
+						Namespace: ksdns.Namespace},
+					zupdDeployment,
+				)
+				return zupdDeployment.Status.UpdatedReplicas, err
+			}, time.Minute, time.Second).Should(Equal(int32(2)))
+			Expect(zupdDeployment.Status.ReadyReplicas).To(Equal(int32(1)))
 			Eventually(func() (int32, error) {
 				zupdDeployment := &appsv1.Deployment{}
 				err := k8sClient.Get(ctx,
@@ -355,7 +367,7 @@ var _ = Describe("ksdns controller", func() {
 					zupdDeployment,
 				)
 				return zupdDeployment.Status.ReadyReplicas, err
-			}, time.Minute, time.Second).Should(Equal(int32(2)))
+			}).Should(Equal(int32(1)))
 		})
 	})
 	Context("unit tests", func() {

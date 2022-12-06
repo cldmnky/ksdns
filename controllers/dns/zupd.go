@@ -109,6 +109,12 @@ func (r *Reconciler) ensureZupdNamespaceAdminRole(ctx context.Context, ksdns *dn
 				Resources: []string{"leases"},
 				Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 			},
+			// Events
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"create", "patch"},
+			},
 		},
 	}
 	op, err := CreateOrUpdateWithRetries(ctx, r.Client, role, func() error {
@@ -278,6 +284,22 @@ func zupdDeployment(ksdns *dnsv1alpha1.Ksdns) *appsv1.Deployment {
 								{
 									ContainerPort: 1053,
 									Protocol:      corev1.ProtocolUDP,
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/ready",
+										Port: intstr.FromInt(8181),
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/health",
+										Port: intstr.FromInt(8080),
+									},
 								},
 							},
 							Args: []string{
