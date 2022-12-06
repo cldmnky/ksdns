@@ -140,7 +140,7 @@ PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile.manager.cross > Dockerfile.manager.cross
-	-   buildx create --name project-v3-builder
+	- docker buildx create --name project-v3-builder
 	docker buildx use project-v3-builder
 	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.manager.cross
 	- docker buildx rm project-v3-builder
