@@ -37,21 +37,25 @@ const (
 // KsdnsSpec defines the desired state of Ksdns
 type KsdnsSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Zones      []Zone                       `json:"zones,omitempty"`
-	CoreDNS    CoreDNS                      `json:"coredns,omitempty"`
-	TsigSecret *corev1.LocalObjectReference `json:"secret,omitempty"`
+	Zones   []Zone  `json:"zones,omitempty"`
+	CoreDNS CoreDNS `json:"coredns,omitempty"`
+	// +kubebuilder:validation:Optional
+	Secret *corev1.LocalObjectReference `json:"secret,omitempty"`
 }
 
 type CoreDNS struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="coredns/coredns:1.10.0"
+	// +kubebuilder:default:="quay.io/ksdns/zupd:latest"
 	Image           string                      `json:"image,omitempty"`
 	ImagePullPolicy corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
 	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
 	NodeSelector    map[string]string           `json:"nodeSelector,omitempty"`
 	Tolerations     []corev1.Toleration         `json:"tolerations,omitempty"`
-	Replicas        int32                       `json:"replicas,omitempty"`
+	Affinity        *corev1.Affinity            `json:"affinity,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=2
+	Replicas int32 `json:"replicas,omitempty"`
 }
 
 type Zone struct {
@@ -59,7 +63,7 @@ type Zone struct {
 	Records []Record `json:"records,omitempty"`
 }
 
-func (z *Zone) ToRfc1035Zone(nsIP net.IP) (*rfc1035v1alpha1.Zone, error) {
+func (z *Zone) ToRfc1035Zone(nsIP net.IP) (*rfc1035v1alpha1.ZoneSpec, error) {
 	if z.Origin == "" {
 		return nil, fmt.Errorf("origin cannot be empty")
 	}
@@ -85,13 +89,8 @@ func (z *Zone) ToRfc1035Zone(nsIP net.IP) (*rfc1035v1alpha1.Zone, error) {
 		}
 		rfc1035Zone += fmt.Sprintf("%s\n", r)
 	}
-	return &rfc1035v1alpha1.Zone{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: z.Origin,
-		},
-		Spec: rfc1035v1alpha1.ZoneSpec{
-			Zone: rfc1035Zone,
-		},
+	return &rfc1035v1alpha1.ZoneSpec{
+		Zone: rfc1035Zone,
 	}, nil
 }
 

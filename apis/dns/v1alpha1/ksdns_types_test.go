@@ -65,9 +65,9 @@ var _ = Describe("ksdns types", func() {
 				}
 				rfc1035, err := z.ToRfc1035Zone(net.ParseIP("192.168.1.1"))
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(rfc1035.Spec.Zone).To(Not(BeNil()))
+				Expect(rfc1035.Zone).To(Not(BeNil()))
 				// Parse the zone
-				parsedZone, err := file.Parse(strings.NewReader(rfc1035.Spec.Zone), "example.org", "example.org", 0)
+				parsedZone, err := file.Parse(strings.NewReader(rfc1035.Zone), "example.org", "example.org", 0)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(parsedZone).To(Not(BeNil()))
 			})
@@ -111,9 +111,9 @@ var _ = Describe("ksdns types", func() {
 				}
 				rfc1035, err := z.ToRfc1035Zone(net.ParseIP("192.168.1.1"))
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(rfc1035.Spec.Zone).To(Not(BeNil()))
+				Expect(rfc1035.Zone).To(Not(BeNil()))
 				// Parse the zone
-				parsedZone, err := file.Parse(strings.NewReader(rfc1035.Spec.Zone), "example.org", "example.org", 0)
+				parsedZone, err := file.Parse(strings.NewReader(rfc1035.Zone), "example.org", "example.org", 0)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(parsedZone).To(Not(BeNil()))
 				Expect(parsedZone.All()).To(HaveLen(5))
