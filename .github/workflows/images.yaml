@@ -1,13 +1,12 @@
-name: Test
+name: Build Images
 on:
-  push:
-    branches:
-      - main
-      - feature/*
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * *'
 
 jobs:
-  test:
-    name: Test
+  images:
+    name: Build Images
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -26,11 +25,7 @@ jobs:
           registry: quay.io
           username: ${{ secrets.QUAY_IO_USERNAME }}
           password: ${{ secrets.QUAY_IO_PASSWORD }}
-      - uses: engineerd/setup-kind@v0.5.0
-        with:
-          version: "v0.17.0"
-      - name: test
-        run: make test
-        env:
-          USE_EXISTING_CLUSTER: "true"
-      
+      - name: build and push manager image (latest)
+        run: make multiarch-image-manager
+      - name: build and push zupd image (latest)
+        run: make multiarch-image-zupd

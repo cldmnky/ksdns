@@ -24,6 +24,7 @@ import (
 
 // ZoneSpec defines the desired state of Zone
 type ZoneSpec struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Zone string `json:"zone,omitempty"`
 }
 
@@ -33,6 +34,7 @@ func (zs *ZoneSpec) GetZone() string {
 
 // ZoneStatus defines the observed state of Zone
 type ZoneStatus struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	DynamicRRs []DynamicRR `json:"dynamicRRs,omitempty"`
 	Serial     uint32      `json:"serial,omitempty"`
 }
@@ -61,7 +63,9 @@ func (zs *ZoneStatus) GetDynamicRRsAsZone(name string) *file.Zone {
 		if rr, err := dns.NewRR(rrString.RR); err != nil {
 			continue
 		} else {
-			zone.Insert(rr)
+			if err := zone.Insert(rr); err != nil {
+				continue
+			}
 		}
 	}
 	if len(zone.All()) == 0 {

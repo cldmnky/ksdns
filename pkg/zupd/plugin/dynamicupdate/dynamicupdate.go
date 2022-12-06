@@ -194,7 +194,9 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 		// Notify other servers
 		if d.transfer != nil {
 			log.Infof("Notifying other  qservers of update")
-			d.transfer.Notify(zone)
+			if err := d.transfer.Notify(zone); err != nil {
+				log.Errorf("Error notifying other servers: %s", err.Error())
+			}
 		}
 
 		m := new(dns.Msg)
@@ -240,7 +242,10 @@ func (d *DynamicUpdate) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 		m.Rcode = dns.RcodeServerFailure
 	}
 
-	w.WriteMsg(m)
+	if err := w.WriteMsg(m); err != nil {
+		log.Errorf("Error writing response: %s", err.Error())
+		return dns.RcodeServerFailure, nil
+	}
 	return dns.RcodeSuccess, nil
 
 }

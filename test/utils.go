@@ -1,6 +1,8 @@
 package test
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"sync"
 
 	_ "github.com/cldmnky/ksdns/pkg/zupd/core/plugin" // Load all managed plugins.
@@ -132,3 +134,9 @@ func (i *Input) Path() string { return "Corefile" }
 
 // ServerType implements the Input interface.
 func (i *Input) ServerType() string { return "dns" }
+
+func generateTsigKey() string {
+	key := make([]byte, 32)
+	rand.Read(key)
+	return base64.StdEncoding.EncodeToString(key)
+}

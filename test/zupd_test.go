@@ -23,7 +23,7 @@ import (
 
 var (
 	fakeTsigKey    string = "example.org."
-	fakeTsigSecret string = "IwBTJx9wrDp4Y1RyC3H0gA=="
+	fakeTsigSecret string = generateTsigKey()
 )
 
 var _ = Describe("zupd", func() {
