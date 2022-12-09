@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	dnsv1alpha1 "github.com/cldmnky/ksdns/apis/dns/v1alpha1"
 	rfc1035v1alpha1 "github.com/cldmnky/ksdns/pkg/zupd/api/v1alpha1"
@@ -67,6 +68,10 @@ func (r *Reconciler) ensureCoreDNS(ctx context.Context, ksdns *dnsv1alpha1.Ksdns
 		return err
 	}
 
+	if err := r.ensureCoreDNSservice(ctx, ksdns); err != nil {
+		return err
+	}
+
 	deployment := coreDNSDeployment(ksdns)
 	op, err := CreateOrUpdateWithRetries(ctx, r.Client, deployment, func() error {
 		return ctrl.SetControllerReference(ksdns, deployment, r.Scheme)
@@ -82,44 +87,29 @@ func (r *Reconciler) ensureCoreDNS(ctx context.Context, ksdns *dnsv1alpha1.Ksdns
 func (r *Reconciler) ensureCoreDNSConfigMap(ctx context.Context, ksdns *dnsv1alpha1.Ksdns) error {
 	log := log.FromContext(ctx)
 	labels := makeLabels("coredns", ksdns)
+
+	// get the service ip for zupd
+	secondaryFrom, err := r.getZupdIPs(ctx, ksdns)
+	if err != nil {
+		return err
+	}
+
+	// get all zones in the current namespace
+	zones, err := r.getZones(ctx, ksdns)
+	if err != nil {
+		return err
+	}
+	// Render the corefile
+	corefile, err := renderCoreDNSCorefile(zones, secondaryFrom, false)
+	if err != nil {
+		return err
+	}
 	coreFile := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      corednsName(ksdns),
 			Namespace: ksdns.Namespace,
 			Labels:    labels,
 		},
-	}
-	// see if we can get the service ip from zupd
-	zupdSvc := &corev1.Service{}
-	if err := r.Get(ctx, types.NamespacedName{Name: zupdName(ksdns), Namespace: ksdns.Namespace}, zupdSvc); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("zupd service not found, skipping ip lookup")
-		} else {
-			return err
-		}
-	}
-	// Get the service ip from the zupd service
-	// if we can't get it, we'll just use the service name
-	// and hope for the best
-	secondaryFrom := []string{zupdSvc.Spec.ClusterIP}
-	if secondaryFrom[0] == "" {
-		secondaryFrom = []string{"169.254.0.1"} // set ip to link local
-	}
-	// Get all zones in the current namespace
-	rfc1035v1alpha1Zones := &rfc1035v1alpha1.ZoneList{}
-	if err := r.List(ctx, rfc1035v1alpha1Zones, &client.ListOptions{
-		Namespace: ksdns.Namespace,
-	}); err != nil {
-		return err
-	}
-	zones := []string{}
-	for _, zone := range rfc1035v1alpha1Zones.Items {
-		zones = append(zones, zone.Name)
-	}
-	// Render the corefile
-	corefile, err := renderCoreDNSCorefile(zones, secondaryFrom, false)
-	if err != nil {
-		return err
 	}
 	// create or update the corefile
 	op, err := CreateOrUpdateWithRetries(ctx, r.Client, coreFile, func() error {
@@ -239,6 +229,104 @@ func (r *Reconciler) ensureCoreDNSserviceaccount(ctx context.Context, ksdns *dns
 	return nil
 }
 
+// getZones gets the zones the current namespace is responsible for
+func (r *Reconciler) getZones(ctx context.Context, ksdns *dnsv1alpha1.Ksdns) ([]string, error) {
+	rfc1035v1alpha1Zones := &rfc1035v1alpha1.ZoneList{}
+	if err := r.List(ctx, rfc1035v1alpha1Zones, &client.ListOptions{
+		Namespace: ksdns.Namespace,
+	}); err != nil {
+		return nil, err
+	}
+	zones := []string{}
+	for _, zone := range rfc1035v1alpha1Zones.Items {
+		zones = append(zones, zone.Name)
+	}
+
+	if len(zones) == 0 {
+		return []string{"."}, nil
+	}
+	return zones, nil
+}
+
+// getZupdIPs gets the ip address of the zupd service
+func (r *Reconciler) getZupdIPs(ctx context.Context, ksdns *dnsv1alpha1.Ksdns) ([]string, error) {
+	log := log.FromContext(ctx)
+
+	// see if we can get the service ip from zupd
+	zupdSvc := &corev1.Service{}
+	if err := r.Get(ctx, types.NamespacedName{Name: zupdName(ksdns), Namespace: ksdns.Namespace}, zupdSvc); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("zupd service not found, skipping ip lookup")
+			return []string{"169.254.0.1"}, nil // set ip to link local
+		} else {
+			return nil, err
+		}
+	}
+
+	// get the service ip from the zupd service
+	// if we can't get it, we'll just use the service name
+	// and hope for the best
+	secondaryFrom := []string{zupdSvc.Spec.ClusterIP}
+	if secondaryFrom[0] == "" {
+		secondaryFrom = []string{"169.254.0.1"} // set ip to link local
+	}
+
+	return secondaryFrom, nil
+}
+
+// service
+func (r *Reconciler) ensureCoreDNSservice(ctx context.Context, ksdns *dnsv1alpha1.Ksdns) error {
+	log := log.FromContext(ctx)
+	// Create the service
+	spec, err := coreDNSServiceSpec(ksdns)
+	if err != nil {
+		return err
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      corednsName(ksdns),
+			Namespace: ksdns.Namespace,
+			Labels:    makeLabels("ksdns", ksdns),
+		},
+	}
+	op, err := CreateOrUpdateWithRetries(ctx, r.Client, svc, func() error {
+		svc.Spec = *spec
+		return ctrl.SetControllerReference(ksdns, svc, r.Scheme)
+	})
+	if err != nil {
+		return err
+	}
+	log.Info("coredns", "service", corednsName(ksdns), "op", op)
+	return nil
+}
+
+func coreDNSServiceSpec(ksdns *dnsv1alpha1.Ksdns) (*corev1.ServiceSpec, error) {
+	// handle type
+	switch ksdns.Spec.Expose.CoreDNS.ServiceType {
+	case corev1.ServiceTypeClusterIP:
+		return &corev1.ServiceSpec{
+			Selector: makeSelector("coredns", ksdns),
+			Type:     corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "dns-udp",
+					Port:       int32(53),
+					TargetPort: intstr.FromInt(1053),
+					Protocol:   corev1.ProtocolUDP,
+				},
+				{
+					Name:       "dns-tcp",
+					Port:       int32(53),
+					TargetPort: intstr.FromInt(1053),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+		}, nil
+		// case corev1.ServiceTypeNodePort:
+	}
+	return nil, fmt.Errorf("unsupported service type: %s", ksdns.Spec.Expose.CoreDNS.ServiceType)
+}
+
 func coreDNSDeployment(ksdns *dnsv1alpha1.Ksdns) *appsv1.Deployment {
 	labels := makeLabels("coredns", ksdns)
 	deployment := &appsv1.Deployment{
@@ -249,7 +337,7 @@ func coreDNSDeployment(ksdns *dnsv1alpha1.Ksdns) *appsv1.Deployment {
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &ksdns.Spec.CoreDNS.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: makeSelector("coredns", ksdns),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

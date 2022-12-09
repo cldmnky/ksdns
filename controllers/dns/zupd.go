@@ -164,7 +164,7 @@ func (r *Reconciler) ensureZupdSvc(ctx context.Context, ksdns *dnsv1alpha1.Ksdns
 	}
 	CreateOrUpdateWithRetries(ctx, r.Client, svc, func() error {
 		svc.Spec = corev1.ServiceSpec{
-			Selector: labels,
+			Selector: makeSelector("zupd", ksdns),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "dns-tcp",
@@ -269,7 +269,7 @@ func zupdDeployment(ksdns *dnsv1alpha1.Ksdns) *appsv1.Deployment {
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: makeSelector("zupd", ksdns),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

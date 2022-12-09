@@ -368,16 +368,83 @@ var _ = Describe("ksdns controller", func() {
 				return zupdDeployment.Status.ReadyReplicas, err
 			}, time.Minute, time.Second).Should(Equal(int32(1)))
 		})
-	})
-	Context("unit tests", func() {
-		Describe("setDefaults", func() {
-			It("should set defaults for a ksdns resource", func() {
-				ksdns := &dnsv1alpha1.Ksdns{}
-				defaulted := setDefaults(ksdns)
-				Expect(defaulted.Spec.CoreDNS.Image).To(Equal(defaultCoreDNSImage))
-				Expect(defaulted.Spec.CoreDNS.Replicas).To(Equal(defaultCoreDNSReplicas))
+
+		It("Should set defaults and validate a ksdns resource", func() {
+			defaulted := &dnsv1alpha1.Ksdns{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ksdnsBaseName + "-defaults",
+					Namespace: ksdnsNameSpace,
+				},
+				Spec: dnsv1alpha1.KsdnsSpec{},
+			}
+			Expect(k8sClient.Create(ctx, defaulted)).Should(Succeed())
+
+			By("Checking that object have defaults")
+			Expect(defaulted.Spec.CoreDNS.Image).To(Equal("quay.io/ksdns/zupd:latest"))
+			Expect(defaulted.Spec.CoreDNS.Replicas).To(Equal(int32(2)))
+			Expect(defaulted.Spec.Expose.CoreDNS.ServiceType).To(Equal(corev1.ServiceTypeClusterIP))
+			Expect(defaulted.Spec.Expose.Zupd.ServiceType).To(Equal(corev1.ServiceTypeClusterIP))
+		})
+		Describe("Expose", func() {
+			Context("ClusterIP", func() {
+				var ksdns *dnsv1alpha1.Ksdns
+				BeforeEach(func() {
+					ksdns = &dnsv1alpha1.Ksdns{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      ksdnsBaseName + "-expose",
+							Namespace: ksdnsNameSpace,
+						},
+						Spec: dnsv1alpha1.KsdnsSpec{
+							Expose: dnsv1alpha1.Expose{
+								CoreDNS: &dnsv1alpha1.ExposeService{
+									ServiceType: corev1.ServiceTypeClusterIP,
+								},
+								Zupd: &dnsv1alpha1.ExposeService{
+									ServiceType: corev1.ServiceTypeClusterIP,
+								},
+							},
+						},
+					}
+				})
+				AfterEach(func() {
+					Eventually(func() error {
+						return k8sClient.Delete(ctx, ksdns)
+					}, time.Minute, time.Second).Should(Succeed())
+				})
+
+				It("Should expose the CoreDNS service", func() {
+					By("Creating a ksdns resource")
+					Expect(k8sClient.Create(ctx, ksdns)).Should(Succeed())
+					By("Reconciling the custom resource created")
+					ksdnsReconciler := &Reconciler{
+						Client: k8sClient,
+						Scheme: k8sClient.Scheme(),
+					}
+					// Reconcile the custom resource
+					_, err := ksdnsReconciler.Reconcile(ctx, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name:      ksdns.Name,
+							Namespace: ksdns.Namespace,
+						},
+					})
+					Expect(err).To(Not(HaveOccurred()))
+
+					By("Checking that the CoreDNS service is created")
+					coreDNSService := &corev1.Service{}
+					Eventually(func() error {
+						return k8sClient.Get(ctx,
+							types.NamespacedName{
+								Name:      fmt.Sprintf("%s-coredns", ksdns.Name),
+								Namespace: ksdns.Namespace},
+							coreDNSService,
+						)
+					}, time.Minute, time.Second).Should(Succeed())
+				})
 			})
 		})
+
+	})
+	Context("unit tests", func() {
 		Describe("newCaddyFile", func() {
 			It("should generate a caddyfile", func() {
 				cf, err := renderCoreDNSCorefile(
@@ -391,6 +458,5 @@ var _ = Describe("ksdns controller", func() {
 				Expect(err).To(Not(HaveOccurred()))
 			})
 		})
-
 	})
 })
