@@ -182,6 +182,7 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOX ?= $(LOCALBIN)/gox
+COSIGN ?= $(LOCALBIN)/cosign
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4.5.7
@@ -207,6 +208,12 @@ $(ENVTEST): $(LOCALBIN)
 gox: $(GOX) ## Download gox locally if necessary.
 $(GOX): $(LOCALBIN)
 	test -s $(GOX)/gox || GOBIN=$(LOCALBIN) go install github.com/mitchellh/gox@latest
+
+.PHONY: cosign
+cosign: $(COSIGN) ## Download cosign locally if necessary.
+$(COSIGN): $(LOCALBIN)
+	test -s $(COSIGN)/cosign || GOBIN=$(LOCALBIN) go install github.com/sigstore/cosign/cmd/cosign@latest
+
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
