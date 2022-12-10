@@ -1,7 +1,7 @@
 # Use distroless as minimal base image to package the zupd binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
-ARG TARGETPLATFORM TARGETARCH  TARGETOS
+ARG TARGETPLATFORM
 LABEL PROJECT="ksdns-operator" \
       MAINTAINER="KSDNS Authors" \
       DESCRIPTION="KSDNS Operator" \
