@@ -13,7 +13,8 @@ build-zupd-image:  ## Build docker image with zupd.
 
 .PHONY: multiarch-image-zupd
 multiarch-image-zupd: build-zupd-release ## Build multiarch container image with zupd.
-	@podman build --manifest ${IMG_ZUPD} --pull --platform linux/amd64,linux/arm64 -f Dockerfile.ksdns-operator bin/release && \
+	@podman image rm ${IMG_ZUPD} -f; \
+	podman build --manifest ${IMG_ZUPD} --pull --platform linux/amd64,linux/arm64 -f Dockerfile.ksdns-operator bin/release && \
 	podman manifest push ${IMG_ZUPD} docker://$(IMG_ZUPD)
 
 .PHONY: sign-zupd-image
