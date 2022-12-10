@@ -137,15 +137,23 @@ build-ksdns-image:  build-ksdns-release ## Build docker image with zupd.
 
 .PHONY: multiarch-image-zupd
 multiarch-image-ksdns: build-ksdns-release ## Build multiarch container image with ksdns-operator.
-	@podman buildx build -t ${IMG_KSDNS}-amd64 --pull --platform linux/amd64 -f Dockerfile.ksdns-operator bin/release && \
-	podman buildx build -t ${IMG_KSDNS}-arm64 --pull --platform linux/arm64 -f Dockerfile.ksdns-operator bin/release && \
-	podman push ${IMG_KSDNS}-arm64 && \
-	podman push ${IMG_KSDNS}-amd64 && \
-	podman manifest create ${IMG_KSDNS} ${IMG_KSDNS}-arm64 ${IMG_KSDNS}-amd64 && \
-	podman manifest push ${IMG_KSDNS} docker://$(IMG_KSDNS) && podman image rm ${IMG_KSDNS}
+	@podman build --manifest ${IMG_KSDNS} --pull --platform linux/amd64,linux/arm64 -f Dockerfile.ksdns-operator bin/release && \
+	podman manifest push ${IMG_KSDNS} docker://$(IMG_KSDNS)
+
+
+.PHONY: sign-ksdns-image
+sign-ksdns-image: ## Sign ksdns-operator image
+	@if [ -f ksdns.key ]; then \
+		${COSIGN} sign --key ksdns.key --recursive ${IMG_KSDNS}; \
+	else \
+		${COSIGN} sign --key env://COSIGN_PRIVATE_KEY --recursive  ${IMG_KSDNS}; \
+	fi
 
 .PHONY: build-and-push-multiarch-images
 build-and-push-multiarch-images: multiarch-image-ksdns multiarch-image-zupd
+
+.PHONY: sign-images
+sign-images: sign-ksdns-image sign-zupd-image ## Sign images
 
 ##@ Deployment
 

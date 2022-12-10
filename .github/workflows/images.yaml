@@ -25,3 +25,7 @@ jobs:
           password: ${{ secrets.QUAY_IO_PASSWORD }}
       - name: build and push images (latest)
         run: make build-and-push-multiarch-images
+      - name: login with cosign
+        run: cosign login quay.io -u ${{ secrets.QUAY_IO_USERNAME }} -p ${{ secrets.QUAY_IO_PASSWORD }}
+      - name: sign images
+        run: make sign-images

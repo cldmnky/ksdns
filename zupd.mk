@@ -13,9 +13,13 @@ build-zupd-image:  ## Build docker image with zupd.
 
 .PHONY: multiarch-image-zupd
 multiarch-image-zupd: build-zupd-release ## Build multiarch container image with zupd.
-	@podman buildx build -t ${IMG_ZUPD}-amd64 --pull --platform linux/amd64 -f Dockerfile.zupd bin/release && \
-	podman buildx build -t ${IMG_ZUPD}-arm64 --pull --platform linux/arm64 -f Dockerfile.zupd bin/release && \
-	podman push ${IMG_ZUPD}-arm64 && \
-	podman push ${IMG_ZUPD}-amd64 && \
-	podman manifest create ${IMG_ZUPD} ${IMG_ZUPD}-arm64 ${IMG_ZUPD}-amd64 && \
-	podman manifest push ${IMG_ZUPD} docker://$(IMG_ZUPD) && podman image rm ${IMG_ZUPD}
+	@podman build --manifest ${IMG_ZUPD} --pull --platform linux/amd64,linux/arm64 -f Dockerfile.ksdns-operator bin/release && \
+	podman manifest push ${IMG_ZUPD} docker://$(IMG_ZUPD)
+
+.PHONY: sign-zupd-image
+sign-zupd-image: ## Sign ksdns-operator image
+	@if [ -f ksdns.key ]; then \
+		${COSIGN} sign --key ksdns.key --recursive ${IMG_ZUPD}; \
+	else \
+		${COSIGN} sign --key env://COSIGN_PRIVATE_KEY --recursive  ${IMG_ZUPD}; \
+	fi
