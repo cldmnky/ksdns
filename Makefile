@@ -138,6 +138,7 @@ build-ksdns-image:  build-ksdns-release ## Build docker image with zupd.
 .PHONY: multiarch-image-zupd
 multiarch-image-ksdns: build-ksdns-release ## Build multiarch container image with ksdns-operator.
 	@podman image rm ${IMG_KSDNS} -f; \
+	podman manifest exists ${IMG_KSDNS} || podman manifest create ${IMG_KSDNS}; \
 	podman build --manifest ${IMG_KSDNS} --pull --platform linux/amd64,linux/arm64 -f Dockerfile.ksdns-operator bin/release && \
 	podman manifest push ${IMG_KSDNS} docker://$(IMG_KSDNS)
 
