@@ -142,7 +142,7 @@ multiarch-image-ksdns: build-ksdns-release ## Build multiarch container image wi
 
 
 .PHONY: sign-ksdns-image
-sign-ksdns-image: ## Sign ksdns-operator image
+sign-ksdns-image: cosign ## Sign ksdns-operator image
 	@if [ -f ksdns.key ]; then \
 		${COSIGN} sign --key ksdns.key --recursive ${IMG_KSDNS}; \
 	else \
