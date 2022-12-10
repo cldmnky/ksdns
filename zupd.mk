@@ -17,7 +17,7 @@ multiarch-image-zupd: build-zupd-release ## Build multiarch container image with
 	podman manifest push ${IMG_ZUPD} docker://$(IMG_ZUPD)
 
 .PHONY: sign-zupd-image
-sign-zupd-image: ## Sign ksdns-operator image
+sign-zupd-image: cosign ## Sign ksdns-operator image
 	@if [ -f ksdns.key ]; then \
 		${COSIGN} sign --key ksdns.key --recursive ${IMG_ZUPD}; \
 	else \
