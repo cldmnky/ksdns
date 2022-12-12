@@ -36,9 +36,10 @@ spec:
             description: KsdnsSpec defines the desired state of Ksdns
             properties:
               coredns:
+                description: CoreDNS configuration
                 properties:
                   affinity:
-                    description: Affinity is a group of affinity scheduling rules.
+                    description: Affinity is the affinity for the CoreDNS deployment.
                     properties:
                       nodeAffinity:
                         description: Describes node affinity scheduling rules for
@@ -907,22 +908,27 @@ spec:
                     type: object
                   image:
                     default: quay.io/ksdns/zupd:latest
+                    description: Image is the image used for the CoreDNS deployment.
                     type: string
                   imagePullPolicy:
-                    description: PullPolicy describes a policy for if/when to pull
-                      a container image
+                    description: ImagePullPolicy is the image pull policy for the
+                      CoreDNS deployment.
                     type: string
                   nodeSelector:
                     additionalProperties:
                       type: string
+                    description: NodeSelector is the node selector for the CoreDNS
+                      deployment.
                     type: object
                   replicas:
                     default: 2
+                    description: Replicas is the number of replicas for the CoreDNS
+                      deployment.
                     format: int32
                     type: integer
                   resources:
-                    description: ResourceRequirements describes the compute resource
-                      requirements.
+                    description: Resources are the resource requirements for the CoreDNS
+                      deployment.
                     properties:
                       limits:
                         additionalProperties:
@@ -948,6 +954,7 @@ spec:
                         type: object
                     type: object
                   tolerations:
+                    description: Tolerations are the tolerations for the CoreDNS deployment.
                     items:
                       description: The pod this Toleration is attached to tolerates
                         any taint that matches the triple <key,value,effect> using
@@ -988,9 +995,88 @@ spec:
                       type: object
                     type: array
                 type: object
+              expose:
+                description: Expose is the configuration for exposing the services.
+                  Must be one of CoreDNS or Zupd.
+                properties:
+                  coredns:
+                    default:
+                      type: ClusterIP
+                    description: CoreDNS is the configuration for exposing the CoreDNS
+                      service.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations are the annotations for the service.
+                        type: object
+                      externalIPs:
+                        description: ExternalIPs is a list of external IP addresses
+                          for the service.
+                        items:
+                          type: string
+                        type: array
+                      loadBalancerIP:
+                        description: LoadBalancerIP is the IP address to assign to
+                          the LoadBalancer service.
+                        type: string
+                      provider:
+                        description: Provider is the name of the cloud provider for
+                          the LoadBalancer service. Currently metallb and aws are
+                          supported.
+                        enum:
+                        - metallb
+                        - aws
+                        type: string
+                      type:
+                        default: ClusterIP
+                        description: ServiceType is the type of service to create.
+                        enum:
+                        - ClusterIP
+                        - NodePort
+                        - LoadBalancer
+                        type: string
+                    type: object
+                  zupd:
+                    default:
+                      type: ClusterIP
+                    description: Zupd is the configuration for exposing the Zupd service.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations are the annotations for the service.
+                        type: object
+                      externalIPs:
+                        description: ExternalIPs is a list of external IP addresses
+                          for the service.
+                        items:
+                          type: string
+                        type: array
+                      loadBalancerIP:
+                        description: LoadBalancerIP is the IP address to assign to
+                          the LoadBalancer service.
+                        type: string
+                      provider:
+                        description: Provider is the name of the cloud provider for
+                          the LoadBalancer service. Currently metallb and aws are
+                          supported.
+                        enum:
+                        - metallb
+                        - aws
+                        type: string
+                      type:
+                        default: ClusterIP
+                        description: ServiceType is the type of service to create.
+                        enum:
+                        - ClusterIP
+                        - NodePort
+                        - LoadBalancer
+                        type: string
+                    type: object
+                type: object
               secret:
-                description: LocalObjectReference contains enough information to let
-                  you locate the referenced object inside the same namespace.
+                description: Secret is the TSIG secret used for the the deployments.
                 properties:
                   name:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -999,6 +1085,7 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               zones:
+                description: Zones is a list of zones to be managed by the operator.
                 items:
                   properties:
                     origin:

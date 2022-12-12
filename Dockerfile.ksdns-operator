@@ -8,8 +8,8 @@ LABEL PROJECT="ksdns-operator" \
       LICENSE="Apache-2.0" \
       PLATFORM="$TARGETPLATFORM" \
       VCS_URL="github.com/cldmnky/ksdns" \
-      COMPONENT="zupd"
+      COMPONENT="ksdns-operator"
 WORKDIR /
-COPY ${TARGETPLATFORM}/zupd /zupd
+COPY ${TARGETPLATFORM}/ksdns-operator /ksdns-operator
 USER 65532:65532
-ENTRYPOINT ["/zupd"]
+ENTRYPOINT ["/ksdns-operator"]

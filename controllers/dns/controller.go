@@ -134,14 +134,3 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Complete(r)
 }
-
-func setDefaults(ksdns *dnsv1alpha1.Ksdns) *dnsv1alpha1.Ksdns {
-	defaultedKsdns := ksdns.DeepCopy()
-	if defaultedKsdns.Spec.CoreDNS.Image == "" {
-		defaultedKsdns.Spec.CoreDNS.Image = defaultCoreDNSImage
-	}
-	if defaultedKsdns.Spec.CoreDNS.Replicas == 0 {
-		defaultedKsdns.Spec.CoreDNS.Replicas = defaultCoreDNSReplicas
-	}
-	return defaultedKsdns
-}

@@ -36,23 +36,81 @@ const (
 
 // KsdnsSpec defines the desired state of Ksdns
 type KsdnsSpec struct {
+	// Zones is a list of zones to be managed by the operator.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Zones   []Zone  `json:"zones,omitempty"`
+	// +kubebuilder:validation:Optional
+	Zones []Zone `json:"zones,omitempty"`
+	// CoreDNS configuration
+	// +kubebuilder:validation:Optional
 	CoreDNS CoreDNS `json:"coredns,omitempty"`
+	// Secret is the TSIG secret used for the the deployments.
 	// +kubebuilder:validation:Optional
 	Secret *corev1.LocalObjectReference `json:"secret,omitempty"`
+	// Expose is the configuration for exposing the services.
+	// Must be one of CoreDNS or Zupd.
+	// +kubebuilder:validation:Optional
+	// +kube-builder:enum=CoreDNS;Zupd
+	Expose Expose `json:"expose,omitempty"`
 }
 
+// Expose is the configuration for exposing the services.
+type Expose struct {
+	// CoreDNS is the configuration for exposing the CoreDNS service.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={"type":"ClusterIP"}
+	CoreDNS *ExposeService `json:"coredns,omitempty"`
+	// Zupd is the configuration for exposing the Zupd service.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={"type":"ClusterIP"}
+	Zupd *ExposeService `json:"zupd,omitempty"`
+}
+
+// ExposeService is the configuration for exposing a service.
+type ExposeService struct {
+	// ServiceType is the type of service to create.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:="ClusterIP"
+	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
+	ServiceType corev1.ServiceType `json:"type,omitempty"`
+	// ExternalIPs is a list of external IP addresses for the service.
+	// +kubebuilder:validation:Optional
+	ExternalIPs []string `json:"externalIPs,omitempty"`
+	// LoadBalancerIP is the IP address to assign to the LoadBalancer service.
+	// +kubebuilder:validation:Optional
+	LoadBalancerIP string `json:"loadBalancerIP,omitempty"`
+	// Provider is the name of the cloud provider for the LoadBalancer service.
+	// Currently metallb and aws are supported.
+	// +kubebuilder:validation:Enum=metallb;aws
+	// +kubebuilder:validation:Optional
+	Provider string `json:"provider,omitempty"`
+	// Annotations are the annotations for the service.
+	// +kubebuilder:validation:Optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// CoreDNS is the configuration for the CoreDNS deployment.
 type CoreDNS struct {
+	// Image is the image used for the CoreDNS deployment.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="quay.io/ksdns/zupd:latest"
-	Image           string                      `json:"image,omitempty"`
-	ImagePullPolicy corev1.PullPolicy           `json:"imagePullPolicy,omitempty"`
-	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
-	NodeSelector    map[string]string           `json:"nodeSelector,omitempty"`
-	Tolerations     []corev1.Toleration         `json:"tolerations,omitempty"`
-	Affinity        *corev1.Affinity            `json:"affinity,omitempty"`
+	Image string `json:"image,omitempty"`
+	// ImagePullPolicy is the image pull policy for the CoreDNS deployment.
+	// +kubebuilder:validation:Optional
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// Resources are the resource requirements for the CoreDNS deployment.
+	// +kubebuilder:validation:Optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	// NodeSelector is the node selector for the CoreDNS deployment.
+	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// Tolerations are the tolerations for the CoreDNS deployment.
+	// +kubebuilder:validation:Optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	// Affinity is the affinity for the CoreDNS deployment.
+	// +kubebuilder:validation:Optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// Replicas is the number of replicas for the CoreDNS deployment.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=2
 	Replicas int32 `json:"replicas,omitempty"`
